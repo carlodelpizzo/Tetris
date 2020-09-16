@@ -152,19 +152,19 @@ class Tet:
                     return True
 
     def correct_off_screen_x(self):
-        off_screen = 0
+        off_screen = None
         for i in range(len(self.body)):
             if falling_blocks[self.body[i]].x >= grid_size * grid_cols:
-                off_screen = 1
+                off_screen = 'right'
                 break
             elif falling_blocks[self.body[i]].x < 0:
-                off_screen = -1
+                off_screen = 'left'
                 break
-        if off_screen == 1:
+        if off_screen == 'right':
             for i in range(len(self.body)):
                 falling_blocks[self.body[i]].x -= grid_size
             self.correct_off_screen_x()
-        elif off_screen == -1:
+        elif off_screen == 'left':
             for i in range(len(self.body)):
                 falling_blocks[self.body[i]].x += grid_size
             self.correct_off_screen_x()
@@ -263,10 +263,10 @@ class TBlock(Tet):
                 falling_blocks[self.body[3]].y += grid_size
                 self.rotation = 3
 
+        if self.collide_block() and self.y > 0:
+            self.rotate(not ccw)
         self.correct_off_screen_x()
         self.correct_off_screen_y()
-        if self.collide_block():
-            self.rotate(not ccw)
 
 
 class JBlock(Tet):
@@ -345,10 +345,10 @@ class JBlock(Tet):
                 falling_blocks[self.body[3]].y += grid_size
                 self.rotation = 3
 
+        if self.collide_block() and self.y > 0:
+            self.rotate(not ccw)
         self.correct_off_screen_x()
         self.correct_off_screen_y()
-        if self.collide_block():
-            self.rotate(not ccw)
 
 
 class LBlock(Tet):
@@ -427,10 +427,10 @@ class LBlock(Tet):
                 falling_blocks[self.body[3]].y += grid_size
                 self.rotation = 3
 
+        if self.collide_block() and self.y > 0:
+            self.rotate(not ccw)
         self.correct_off_screen_x()
         self.correct_off_screen_y()
-        if self.collide_block():
-            self.rotate(not ccw)
 
 
 class IBlock(Tet):
@@ -465,10 +465,10 @@ class IBlock(Tet):
             falling_blocks[self.body[3]].y -= grid_size * 3
             self.rotation = 0
 
+        if self.collide_block() and self.y > 0:
+            self.rotate()
         self.correct_off_screen_x()
         self.correct_off_screen_y()
-        if self.collide_block():
-            self.rotate()
 
 
 class OBlock(Tet):
@@ -517,10 +517,10 @@ class SBlock(Tet):
             falling_blocks[self.body[3]].x += grid_size * 2
             self.rotation = 0
 
+        if self.collide_block() and self.y > 0:
+            self.rotate()
         self.correct_off_screen_x()
         self.correct_off_screen_y()
-        if self.collide_block():
-            self.rotate()
 
 
 class ZBlock(Tet):
@@ -553,17 +553,19 @@ class ZBlock(Tet):
             falling_blocks[self.body[3]].x += grid_size * 2
             self.rotation = 0
 
+        if self.collide_block() and self.y > 0:
+            self.rotate()
         self.correct_off_screen_x()
         self.correct_off_screen_y()
-        if self.collide_block():
-            self.rotate()
 
 
-def draw_bg_grid():
+def draw_bg_grid(dif_color=None):
+    if dif_color is None:
+        dif_color = grid_color
     for i in range(0, grid_cols + 1):
-        pygame.draw.rect(screen, grid_color, (grid_size * i, 0, 1, grid_size * grid_rows))
+        pygame.draw.rect(screen, dif_color, (grid_size * i, 0, 1, grid_size * grid_rows))
     for i in range(0, grid_rows + 1):
-        pygame.draw.rect(screen, grid_color, (0, grid_size * i, grid_size * grid_cols, 1))
+        pygame.draw.rect(screen, dif_color, (0, grid_size * i, grid_size * grid_cols, 1))
 
 
 def fall_tet():
@@ -660,10 +662,10 @@ def spawn_random_tet(ran_pos=False):
 
 
 def round_over():
-    global score
     global blocks
     global falling_blocks
     global tet_list
+    global round_frame_count
 
     num_clear = 0
     for blk in blocks:
@@ -671,7 +673,6 @@ def round_over():
             num_clear += 1
     num_active = int(len(blocks) - num_clear)
     num_clear = int(num_clear / grid_cols)
-    score = num_clear, num_active
     blocks = []
     falling_blocks = []
     tet_list = []
@@ -679,8 +680,22 @@ def round_over():
     for i in range(len(grid_array)):
         grid_array[i] = 0
     if num_active != 0:
-        print('cleared rows: ' + str(num_clear) + ', uncleared blocks: ' + str(num_active))
-    spawn_random_tet()
+        print('cleared rows: ' + str(num_clear) + ', uncleared blocks: ' + str(num_active) + ', t: ' +
+              str(round_frame_count) + ', Gt: ' + str(global_frame_count))
+    round_frame_count = 0
+    spawn_random_tet(True)
+
+
+def randomly_rotate():
+    roll = random.randint(0, 69)
+    roll2 = random.randint(0, 1)
+    if roll == 0:
+        if roll2 == 0:
+            for t in tet_list:
+                t.rotate()
+        else:
+            for t in tet_list:
+                t.rotate(False)
 
 
 grid_array = []
@@ -691,21 +706,27 @@ for r in range(0, grid_cols):
 score = 0
 fall_cool_down_timer = 0
 fall_cool_down = frame_rate / 2
-lock_delay = frame_rate / 2
+# lock_delay = frame_rate / 2
+lock_delay = 1
 blocks = []
 falling_blocks = []
 last_spawned_blocks = ['', '']
 tet_list = []
 quick_drop = False
-quick_drop_override = False
+mondo_speed = False
 move_left = False
 move_right = False
 move_delay = 0
 running = True
 pause = False
+round_frame_count = 0
+global_frame_count = 0
 while running:
     screen.fill(black)
-    draw_bg_grid()
+    if pause:
+        draw_bg_grid(pink)
+    else:
+        draw_bg_grid()
     # Event loop
     for event in pygame.event.get():
         # Close window
@@ -778,7 +799,7 @@ while running:
                 pause = False
             # Force quick drop
             if keys[K_u]:
-                quick_drop_override = not quick_drop_override
+                mondo_speed = not mondo_speed
 
         # Key up events
         if event.type == pygame.KEYUP:
@@ -795,8 +816,10 @@ while running:
                 move_left = False
 
     # Block updates
+    if mondo_speed:
+        randomly_rotate()
     if not pause:
-        if fall_cool_down_timer == 0 or quick_drop or quick_drop_override:
+        if fall_cool_down_timer == 0 or quick_drop or mondo_speed:
             drop_blocks()
             fall_tet()
             clear_blocks()
@@ -814,7 +837,12 @@ while running:
     for block in falling_blocks:
         block.draw()
 
-    clock.tick(frame_rate)
+    round_frame_count += 1
+    global_frame_count += 1
+    if round_frame_count > 5000:
+        round_over()
+    if not mondo_speed:
+        clock.tick(frame_rate)
     pygame.display.flip()
 
 
