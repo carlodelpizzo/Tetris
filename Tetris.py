@@ -59,18 +59,6 @@ class Block:
         self.cleared = True
         grid_array[self.index] = 0
 
-    def update_x(self, x_offset):
-        if self.x + x_offset < 0:
-            return
-        elif self.x + x_offset > screen_width - grid_size:
-            return
-        for blk in blocks:
-            if not blk.locked or blk.influence > 0 or blk.cleared:
-                continue
-            if self.x + x_offset == blk.x:
-                return
-        self.x += x_offset
-
 
 class Tet:
     def __init__(self, x, y):
@@ -125,7 +113,7 @@ class Tet:
         else:
             return False
 
-    def lock(self):
+    def commit_self_die(self):
         if self.locked and self.influence == 0:
             for i in range(len(self.body)):
                 blocks.append(falling_blocks[self.body[i]])
@@ -134,6 +122,81 @@ class Tet:
             for i in range(len(self.body)):
                 falling_blocks.pop(self.body[i])
             tet_s.pop(0)
+
+
+class TBlock(Tet):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+        self.body.append(len(falling_blocks))
+        falling_blocks.append(Block(self.x + grid_size, self.y))
+        self.body.append(len(falling_blocks))
+        falling_blocks.append(Block(self.x, self.y + grid_size))
+        self.body.append(len(falling_blocks))
+        falling_blocks.append(Block(self.x + grid_size, self.y + grid_size))
+        self.body.append(len(falling_blocks))
+        falling_blocks.append(Block(self.x + grid_size * 2, self.y + grid_size))
+
+    def rotate(self):
+        if self.rotation == 0:
+            falling_blocks[self.body[0]].x -= grid_size
+            falling_blocks[self.body[0]].y += grid_size
+            falling_blocks[self.body[1]].x += grid_size
+            falling_blocks[self.body[1]].y += grid_size
+            falling_blocks[self.body[3]].x -= grid_size
+            falling_blocks[self.body[3]].y -= grid_size
+            self.rotation += 1
+        elif self.rotation == 1:
+            falling_blocks[self.body[0]].x += grid_size
+            falling_blocks[self.body[1]].x += grid_size
+            falling_blocks[self.body[1]].y -= grid_size * 2
+            falling_blocks[self.body[2]].y -= grid_size
+            falling_blocks[self.body[3]].x -= grid_size
+            self.rotation += 1
+        elif self.rotation == 2:
+            falling_blocks[self.body[1]].x -= grid_size * 2
+            falling_blocks[self.body[2]].x -= grid_size
+            falling_blocks[self.body[2]].y += grid_size
+            falling_blocks[self.body[3]].y += grid_size * 2
+            self.rotation += 1
+        elif self.rotation == 3:
+            falling_blocks[self.body[0]].y -= grid_size
+            falling_blocks[self.body[1]].y += grid_size
+            falling_blocks[self.body[2]].x += grid_size
+            falling_blocks[self.body[3]].x += grid_size * 2
+            falling_blocks[self.body[3]].y -= grid_size
+            self.rotation = 0
+
+        def correct_off_screen_x():
+            off_screen = 0
+            for i in range(len(self.body)):
+                if falling_blocks[self.body[i]].x > screen_width - 1:
+                    off_screen = 1
+                    break
+                elif falling_blocks[self.body[i]].x < 0:
+                    off_screen = -1
+                    break
+            if off_screen == 1:
+                for i in range(len(self.body)):
+                    falling_blocks[self.body[i]].x -= grid_size
+                correct_off_screen_x()
+            elif off_screen == -1:
+                for i in range(len(self.body)):
+                    falling_blocks[self.body[i]].x += grid_size
+                correct_off_screen_x()
+
+        def correct_off_screen_y():
+            off_screen = False
+            for i in range(len(self.body)):
+                if falling_blocks[self.body[i]].y > screen_height - 1:
+                    off_screen = True
+                    break
+            if off_screen:
+                for i in range(len(self.body)):
+                    falling_blocks[self.body[i]].y -= grid_size
+                correct_off_screen_y()
+
+        correct_off_screen_x()
+        correct_off_screen_y()
 
 
 class JBlock(Tet):
@@ -179,20 +242,38 @@ class JBlock(Tet):
             falling_blocks[self.body[3]].x += grid_size * 2
             falling_blocks[self.body[3]].y -= grid_size
             self.rotation = 0
-        off_screen = 0
-        for i in range(len(self.body)):
-            if falling_blocks[self.body[i]].x > screen_width - 1:
-                off_screen = 1
-                break
-            elif falling_blocks[self.body[i]].x < 0:
-                off_screen = -1
-                break
-        if off_screen == 1:
+
+        def correct_off_screen_x():
+            off_screen = 0
             for i in range(len(self.body)):
-                falling_blocks[self.body[i]].x -= grid_size
-        elif off_screen == -1:
+                if falling_blocks[self.body[i]].x > screen_width - 1:
+                    off_screen = 1
+                    break
+                elif falling_blocks[self.body[i]].x < 0:
+                    off_screen = -1
+                    break
+            if off_screen == 1:
+                for i in range(len(self.body)):
+                    falling_blocks[self.body[i]].x -= grid_size
+                correct_off_screen_x()
+            elif off_screen == -1:
+                for i in range(len(self.body)):
+                    falling_blocks[self.body[i]].x += grid_size
+                correct_off_screen_x()
+
+        def correct_off_screen_y():
+            off_screen = False
             for i in range(len(self.body)):
-                falling_blocks[self.body[i]].x += grid_size
+                if falling_blocks[self.body[i]].y > screen_height - 1:
+                    off_screen = True
+                    break
+            if off_screen:
+                for i in range(len(self.body)):
+                    falling_blocks[self.body[i]].y -= grid_size
+                correct_off_screen_y()
+
+        correct_off_screen_x()
+        correct_off_screen_y()
 
 
 class LBlock(Tet):
@@ -238,20 +319,38 @@ class LBlock(Tet):
             falling_blocks[self.body[3]].x += grid_size * 2
             falling_blocks[self.body[3]].y -= grid_size
             self.rotation = 0
-        off_screen = 0
-        for i in range(len(self.body)):
-            if falling_blocks[self.body[i]].x > screen_width - 1:
-                off_screen = 1
-                break
-            elif falling_blocks[self.body[i]].x < 0:
-                off_screen = -1
-                break
-        if off_screen == 1:
+
+        def correct_off_screen_x():
+            off_screen = 0
             for i in range(len(self.body)):
-                falling_blocks[self.body[i]].x -= grid_size
-        elif off_screen == -1:
+                if falling_blocks[self.body[i]].x > screen_width - 1:
+                    off_screen = 1
+                    break
+                elif falling_blocks[self.body[i]].x < 0:
+                    off_screen = -1
+                    break
+            if off_screen == 1:
+                for i in range(len(self.body)):
+                    falling_blocks[self.body[i]].x -= grid_size
+                correct_off_screen_x()
+            elif off_screen == -1:
+                for i in range(len(self.body)):
+                    falling_blocks[self.body[i]].x += grid_size
+                correct_off_screen_x()
+
+        def correct_off_screen_y():
+            off_screen = False
             for i in range(len(self.body)):
-                falling_blocks[self.body[i]].x += grid_size
+                if falling_blocks[self.body[i]].y > screen_height - 1:
+                    off_screen = True
+                    break
+            if off_screen:
+                for i in range(len(self.body)):
+                    falling_blocks[self.body[i]].y -= grid_size
+                correct_off_screen_y()
+
+        correct_off_screen_x()
+        correct_off_screen_y()
 
 
 class IBlock(Tet):
@@ -284,7 +383,7 @@ class IBlock(Tet):
             falling_blocks[self.body[3]].y -= grid_size * 3
             self.rotation = 0
 
-        def correct_off_screen():
+        def correct_off_screen_x():
             off_screen = 0
             for i in range(len(self.body)):
                 if falling_blocks[self.body[i]].x > screen_width - 1:
@@ -296,13 +395,25 @@ class IBlock(Tet):
             if off_screen == 1:
                 for i in range(len(self.body)):
                     falling_blocks[self.body[i]].x -= grid_size
-                correct_off_screen()
+                correct_off_screen_x()
             elif off_screen == -1:
                 for i in range(len(self.body)):
                     falling_blocks[self.body[i]].x += grid_size
-                correct_off_screen()
+                correct_off_screen_x()
 
-        correct_off_screen()
+        def correct_off_screen_y():
+            off_screen = False
+            for i in range(len(self.body)):
+                if falling_blocks[self.body[i]].y > screen_height - 1:
+                    off_screen = True
+                    break
+            if off_screen:
+                for i in range(len(self.body)):
+                    falling_blocks[self.body[i]].y -= grid_size
+                correct_off_screen_y()
+
+        correct_off_screen_x()
+        correct_off_screen_y()
 
 
 class OBlock(Tet):
@@ -319,6 +430,128 @@ class OBlock(Tet):
 
     def rotate(self):
         pass
+
+
+class SBlock(Tet):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+        self.body.append(len(falling_blocks))
+        falling_blocks.append(Block(self.x, self.y + grid_size))
+        self.body.append(len(falling_blocks))
+        falling_blocks.append(Block(self.x + grid_size, self.y + grid_size))
+        self.body.append(len(falling_blocks))
+        falling_blocks.append(Block(self.x + grid_size, self.y))
+        self.body.append(len(falling_blocks))
+        falling_blocks.append(Block(self.x + grid_size * 2, self.y))
+
+    def rotate(self):
+        if self.rotation == 0:
+            falling_blocks[self.body[0]].y += grid_size
+            falling_blocks[self.body[0]].x += grid_size
+            falling_blocks[self.body[2]].x -= grid_size
+            falling_blocks[self.body[2]].y += grid_size
+            falling_blocks[self.body[3]].x -= grid_size * 2
+            self.rotation += 1
+        elif self.rotation == 1:
+            falling_blocks[self.body[0]].y -= grid_size
+            falling_blocks[self.body[0]].x -= grid_size
+            falling_blocks[self.body[2]].x += grid_size
+            falling_blocks[self.body[2]].y -= grid_size
+            falling_blocks[self.body[3]].x += grid_size * 2
+            self.rotation = 0
+
+        def correct_off_screen_x():
+            off_screen = 0
+            for i in range(len(self.body)):
+                if falling_blocks[self.body[i]].x > screen_width - 1:
+                    off_screen = 1
+                    break
+                elif falling_blocks[self.body[i]].x < 0:
+                    off_screen = -1
+                    break
+            if off_screen == 1:
+                for i in range(len(self.body)):
+                    falling_blocks[self.body[i]].x -= grid_size
+                correct_off_screen_x()
+            elif off_screen == -1:
+                for i in range(len(self.body)):
+                    falling_blocks[self.body[i]].x += grid_size
+                correct_off_screen_x()
+
+        def correct_off_screen_y():
+            off_screen = False
+            for i in range(len(self.body)):
+                if falling_blocks[self.body[i]].y > screen_height - 1:
+                    off_screen = True
+                    break
+            if off_screen:
+                for i in range(len(self.body)):
+                    falling_blocks[self.body[i]].y -= grid_size
+                correct_off_screen_y()
+
+        correct_off_screen_x()
+        correct_off_screen_y()
+
+
+class ZBlock(Tet):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+        self.body.append(len(falling_blocks))
+        falling_blocks.append(Block(self.x, self.y))
+        self.body.append(len(falling_blocks))
+        falling_blocks.append(Block(self.x + grid_size, self.y))
+        self.body.append(len(falling_blocks))
+        falling_blocks.append(Block(self.x + grid_size, self.y + grid_size))
+        self.body.append(len(falling_blocks))
+        falling_blocks.append(Block(self.x + grid_size * 2, self.y + grid_size))
+
+    def rotate(self):
+        if self.rotation == 0:
+            falling_blocks[self.body[0]].y += grid_size
+            falling_blocks[self.body[0]].x += grid_size
+            falling_blocks[self.body[2]].x -= grid_size
+            falling_blocks[self.body[2]].y += grid_size
+            falling_blocks[self.body[3]].x -= grid_size * 2
+            self.rotation += 1
+        elif self.rotation == 1:
+            falling_blocks[self.body[0]].y -= grid_size
+            falling_blocks[self.body[0]].x -= grid_size
+            falling_blocks[self.body[2]].x += grid_size
+            falling_blocks[self.body[2]].y -= grid_size
+            falling_blocks[self.body[3]].x += grid_size * 2
+            self.rotation = 0
+
+        def correct_off_screen_x():
+            off_screen = 0
+            for i in range(len(self.body)):
+                if falling_blocks[self.body[i]].x > screen_width - 1:
+                    off_screen = 1
+                    break
+                elif falling_blocks[self.body[i]].x < 0:
+                    off_screen = -1
+                    break
+            if off_screen == 1:
+                for i in range(len(self.body)):
+                    falling_blocks[self.body[i]].x -= grid_size
+                correct_off_screen_x()
+            elif off_screen == -1:
+                for i in range(len(self.body)):
+                    falling_blocks[self.body[i]].x += grid_size
+                correct_off_screen_x()
+
+        def correct_off_screen_y():
+            off_screen = False
+            for i in range(len(self.body)):
+                if falling_blocks[self.body[i]].y > screen_height - 1:
+                    off_screen = True
+                    break
+            if off_screen:
+                for i in range(len(self.body)):
+                    falling_blocks[self.body[i]].y -= grid_size
+                correct_off_screen_y()
+
+        correct_off_screen_x()
+        correct_off_screen_y()
 
 
 grid_cols = 10
@@ -353,7 +586,7 @@ def lock_tet():
             tet.locked = False
             tet.influence = -1
         elif tet.influence == 0 and tet.collide_y():
-            tet.lock()
+            tet.commit_self_die()
 
 
 def drop_blocks():
@@ -427,6 +660,18 @@ while running:
             if keys[K_o]:
                 if len(tet_s) == 0:
                     tet_s.append(OBlock(0, 0))
+            # Spawn SBlock
+            if keys[K_s]:
+                if len(tet_s) == 0:
+                    tet_s.append(SBlock(0, 0))
+            # Spawn ZBlock
+            if keys[K_z]:
+                if len(tet_s) == 0:
+                    tet_s.append(ZBlock(0, 0))
+            # Spawn TBlock
+            if keys[K_t]:
+                if len(tet_s) == 0:
+                    tet_s.append(TBlock(0, 0))
             # Move falling block right
             if keys[K_RIGHT]:
                 if len(tet_s) != 0:
