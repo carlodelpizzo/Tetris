@@ -575,7 +575,10 @@ def lock_tet():
     for t in tet_list:
         if not t.locked and t.collide_y(grid_size):
             t.locked = True
-            t.influence = lock_delay
+            if mondo_mode:
+                t.influence = 0
+            else:
+                t.influence = lock_delay
         if t.influence > 0 and t.collide_y(grid_size):
             t.influence -= 1
         elif t.influence > 0 and not t.collide_y(grid_size):
@@ -583,7 +586,10 @@ def lock_tet():
             t.influence = -1
         elif t.influence == 0 and t.collide_y(grid_size):
             t.commit_self_die()
-            spawn_random_tet(True)
+            if mondo_mode:
+                spawn_random_tet(True)
+            else:
+                spawn_random_tet()
 
 
 def move_tet():
@@ -680,7 +686,10 @@ def round_over():
         print('cleared rows: ' + str(num_clear) + ', uncleared blocks: ' + str(num_active) + ', t: ' +
               str(round_frame_count) + ', Gt: ' + str(global_frame_count))
     round_frame_count = 0
-    spawn_random_tet(True)
+    if mondo_mode:
+        spawn_random_tet(True)
+    else:
+        spawn_random_tet()
 
 
 def randomly_rotate():
@@ -715,14 +724,13 @@ for r in range(0, grid_cols):
 score = 0
 fall_cool_down_timer = 0
 fall_cool_down = frame_rate / 2
-# lock_delay = frame_rate / 2
-lock_delay = 1
+lock_delay = frame_rate / 2
 blocks = []
 falling_blocks = []
 last_spawned_blocks = ['', '']
 tet_list = []
 quick_drop = False
-mondo_speed = False
+mondo_mode = False
 move_left = False
 move_right = False
 move_delay = 0
@@ -808,7 +816,7 @@ while running:
                 pause = False
             # Mondo mode
             if keys[K_u]:
-                mondo_speed = not mondo_speed
+                mondo_mode = not mondo_mode
                 spawn_random_tet(True)
 
         # Key up events
@@ -827,7 +835,7 @@ while running:
 
     # Block updates
     if not pause:
-        if fall_cool_down_timer == 0 or quick_drop or mondo_speed:
+        if fall_cool_down_timer == 0 or quick_drop or mondo_mode:
             drop_blocks()
             fall_tet()
             clear_blocks()
@@ -840,7 +848,7 @@ while running:
         elif move_delay > 0:
             move_delay -= 1
     # For testing
-    if mondo_speed:
+    if mondo_mode:
         randomly_rotate()
         randomly_move()
     # Draw blocks
@@ -854,7 +862,7 @@ while running:
         global_frame_count += 1
     # if round_frame_count > 5000:
     #     round_over()
-    if not mondo_speed:
+    if not mondo_mode:
         clock.tick(frame_rate)
     pygame.display.flip()
 
