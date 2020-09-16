@@ -669,7 +669,7 @@ def round_over():
     global falling_blocks
     global tet_list
     global round_frame_count
-    global games
+    global rounds_played
 
     num_clear = 0
     for blk in blocks:
@@ -684,9 +684,9 @@ def round_over():
     for i in range(len(grid_array)):
         grid_array[i] = 0
     if num_active != 0:
-        games += 1
+        rounds_played += 1
         print('cleared rows: ' + str(num_clear) + ', uncleared blocks: ' + str(num_active) + ', t: ' +
-              str(round_frame_count) + ', Gt: ' + str(global_frame_count) + ', Games: ' + str(games))
+              str(round_frame_count) + ', Gt: ' + str(global_frame_count) + ', Rounds: ' + str(rounds_played))
     round_frame_count = 0
     if mondo_mode:
         spawn_random_tet(True)
@@ -740,7 +740,7 @@ running = True
 pause = True
 round_frame_count = 0
 global_frame_count = 0
-games = 0
+rounds_played = 0
 while running:
     screen.fill(black)
     if pause:
