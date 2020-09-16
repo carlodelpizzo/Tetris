@@ -465,7 +465,6 @@ def fall_tet():
             t.update_y(grid_size)
 
 
-# Spawning random blocks on lock
 def lock_tet():
     for t in tet_list:
         if not t.locked and t.collide_y():
@@ -479,6 +478,14 @@ def lock_tet():
         elif t.influence == 0 and t.collide_y():
             t.commit_self_die()
             spawn_random_tet()
+
+
+def move_tet():
+    for t in tet_list:
+        if move_left:
+            t.update_x(-grid_size)
+        elif move_right:
+            t.update_x(grid_size)
 
 
 def drop_blocks():
@@ -515,12 +522,14 @@ def clear_blocks():
 
 
 def spawn_random_tet():
-    tet_array = [TBlock, JBlock, LBlock, IBlock, OBlock, SBlock, ZBlock]
-    ran_tet = random.randint(0, len(tet_array) - 1)
-    ran_x = random.randint(0, grid_size * grid_cols)
-    ran_x = int(ran_x - (ran_x % grid_size))
-    tet_list.append(tet_array[ran_tet](ran_x, -grid_size * 2))
-    tet_list[len(tet_list) - 1].correct_off_screen_x()
+    if len(tet_list) == 0:
+        tet_array = [TBlock, JBlock, LBlock, IBlock, OBlock, SBlock, ZBlock]
+        ran_tet = random.randint(0, len(tet_array) - 1)
+        # ran_x = random.randint(0, grid_size * grid_cols)
+        ran_x = screen_width / 2
+        ran_x = int(ran_x - (ran_x % grid_size)) - grid_size
+        tet_list.append(tet_array[ran_tet](ran_x, -grid_size * 2))
+        tet_list[len(tet_list) - 1].correct_off_screen_x()
 
 
 def round_over():
@@ -544,7 +553,6 @@ def round_over():
         grid_array[i] = 0
     if score != 0:
         print(score)
-    spawn_random_tet()
 
 
 score = 0
@@ -554,6 +562,10 @@ lock_delay = frame_rate / 2
 blocks = []
 falling_blocks = []
 tet_list = []
+quick_drop = False
+move_left = False
+move_right = False
+move_delay = 0
 running = True
 while running:
     screen.fill(black)
@@ -605,27 +617,49 @@ while running:
                 for tet in tet_list:
                     tet.rotate()
             # Move falling block right
-            if keys[K_RIGHT]:
-                for tet in tet_list:
-                    tet.update_x(grid_size)
+            if keys[K_RIGHT] and not move_right:
+                move_delay = 0
+                move_right = True
+                move_tet()
+                move_delay = frame_rate / 4
             # Move falling block left
-            if keys[K_LEFT]:
-                for tet in tet_list:
-                    tet.update_x(-grid_size)
+            if keys[K_LEFT] and not move_left:
+                move_delay = 0
+                move_left = True
+                move_tet()
+                move_delay = frame_rate / 4
+            # Turn on quick drop
+            if keys[K_DOWN] and not quick_drop:
+                quick_drop = True
+            # Generate random block
+            if keys[K_SPACE]:
+                spawn_random_tet()
 
         # Key up events
         if event.type == pygame.KEYUP:
-            pass
+            # Turn off quick drop
+            if not keys[K_DOWN] and quick_drop:
+                quick_drop = False
+            # Stop move falling block right
+            if not keys[K_RIGHT] and move_right:
+                move_right = False
+            # Stop move falling block left
+            if not keys[K_LEFT] and move_left:
+                move_left = False
 
     # Block updates
-    if fall_cool_down_timer == 0:
+    if fall_cool_down_timer == 0 or quick_drop:
         drop_blocks()
         fall_tet()
         clear_blocks()
-        # fall_cool_down_timer = fall_cool_down
-    elif fall_cool_down_timer != 0:
+        fall_cool_down_timer = fall_cool_down
+    elif fall_cool_down_timer > 0:
         fall_cool_down_timer -= 1
     lock_tet()
+    if move_delay == 0:
+        move_tet()
+    elif move_delay > 0:
+        move_delay -= 1
     # Draw blocks
     for block in blocks:
         block.draw()
