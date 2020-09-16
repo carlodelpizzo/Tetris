@@ -9,8 +9,8 @@ frame_rate = 60
 # Screen
 # screen_width = 500
 screen_height = 600
-grid_rows = 15
-grid_cols = 10
+grid_rows = 25
+grid_cols = 20
 grid_size = int(screen_height / grid_rows)
 screen_width = grid_cols * grid_size
 screen_height = grid_rows * grid_size
@@ -119,25 +119,23 @@ class Tet:
             self.x += x_offset
 
     def update_y(self, y_offset):
-        edge = self.collide_y()
-        if not edge:
+        if not self.collide_y(y_offset):
             for i in range(len(self.body)):
                 falling_blocks[self.body[i]].y += y_offset
             self.y += y_offset
 
-    def collide_y(self):
+    def collide_y(self, y_offset):
         collide = False
         for i in range(len(self.body)):
-            if falling_blocks[self.body[i]].y + grid_size >= grid_size * grid_rows:
+            if falling_blocks[self.body[i]].y + y_offset >= grid_size * grid_rows:
                 collide = True
                 break
             for bi in range(len(blocks)):
-                if blocks[bi].cleared:
-                    continue
-                if falling_blocks[self.body[i]].y + grid_size == blocks[bi].y and \
-                        falling_blocks[self.body[i]].x == blocks[bi].x:
-                    collide = True
-                    break
+                if not blocks[bi].cleared:
+                    if falling_blocks[self.body[i]].y + y_offset == blocks[bi].y and \
+                            falling_blocks[self.body[i]].x == blocks[bi].x:
+                        collide = True
+                        break
         if collide:
             return True
         else:
@@ -570,21 +568,20 @@ def draw_bg_grid(dif_color=None):
 
 def fall_tet():
     for t in tet_list:
-        if not t.locked:
-            t.update_y(grid_size)
+        t.update_y(grid_size)
 
 
 def lock_tet():
     for t in tet_list:
-        if not t.locked and t.collide_y():
+        if not t.locked and t.collide_y(grid_size):
             t.locked = True
             t.influence = lock_delay
-        if t.influence > 0 and t.collide_y():
+        if t.influence > 0 and t.collide_y(grid_size):
             t.influence -= 1
-        elif t.influence > 0 and not t.collide_y():
+        elif t.influence > 0 and not t.collide_y(grid_size):
             t.locked = False
             t.influence = -1
-        elif t.influence == 0 and t.collide_y():
+        elif t.influence == 0 and t.collide_y(grid_size):
             t.commit_self_die()
             spawn_random_tet(True)
 
@@ -687,7 +684,7 @@ def round_over():
 
 
 def randomly_rotate():
-    roll = random.randint(0, 69)
+    roll = random.randint(0, 19)
     roll2 = random.randint(0, 1)
     if roll == 0:
         if roll2 == 0:
@@ -696,6 +693,18 @@ def randomly_rotate():
         else:
             for t in tet_list:
                 t.rotate(False)
+
+
+def randomly_move():
+    roll = random.randint(0, 9)
+    roll2 = random.randint(0, 1)
+    if roll == 0:
+        if roll2 == 0:
+            for t in tet_list:
+                t.update_x(grid_size)
+        else:
+            for t in tet_list:
+                t.update_x(-grid_size)
 
 
 grid_array = []
@@ -718,7 +727,7 @@ move_left = False
 move_right = False
 move_delay = 0
 running = True
-pause = False
+pause = True
 round_frame_count = 0
 global_frame_count = 0
 while running:
@@ -797,9 +806,10 @@ while running:
                 pause = True
             elif keys[K_p] and pause:
                 pause = False
-            # Force quick drop
+            # Mondo mode
             if keys[K_u]:
                 mondo_speed = not mondo_speed
+                spawn_random_tet(True)
 
         # Key up events
         if event.type == pygame.KEYUP:
@@ -816,8 +826,6 @@ while running:
                 move_left = False
 
     # Block updates
-    if mondo_speed:
-        randomly_rotate()
     if not pause:
         if fall_cool_down_timer == 0 or quick_drop or mondo_speed:
             drop_blocks()
@@ -831,16 +839,21 @@ while running:
             move_tet()
         elif move_delay > 0:
             move_delay -= 1
+    # For testing
+    if mondo_speed:
+        randomly_rotate()
+        randomly_move()
     # Draw blocks
     for block in blocks:
         block.draw()
     for block in falling_blocks:
         block.draw()
 
-    round_frame_count += 1
-    global_frame_count += 1
-    if round_frame_count > 5000:
-        round_over()
+    if not pause:
+        round_frame_count += 1
+        global_frame_count += 1
+    # if round_frame_count > 5000:
+    #     round_over()
     if not mondo_speed:
         clock.tick(frame_rate)
     pygame.display.flip()
