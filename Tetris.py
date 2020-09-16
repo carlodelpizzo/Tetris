@@ -584,7 +584,7 @@ def lock_tet():
             t.influence = -1
         elif t.influence == 0 and t.collide_y():
             t.commit_self_die()
-            spawn_random_tet()
+            spawn_random_tet(True)
 
 
 def move_tet():
@@ -669,17 +669,17 @@ def round_over():
     for blk in blocks:
         if blk.cleared:
             num_clear += 1
-    num_active = len(blocks) - num_clear
-    num_clear /= grid_cols
-    score = int(((num_clear * 10) + (num_active * 2)) / 20)
+    num_active = int(len(blocks) - num_clear)
+    num_clear = int(num_clear / grid_cols)
+    score = num_clear, num_active
     blocks = []
     falling_blocks = []
     tet_list = []
 
     for i in range(len(grid_array)):
         grid_array[i] = 0
-    if score != 0:
-        print(score)
+    if num_active != 0:
+        print('cleared rows: ' + str(num_clear) + ', uncleared blocks: ' + str(num_active))
     spawn_random_tet()
 
 
@@ -697,6 +697,7 @@ falling_blocks = []
 last_spawned_blocks = ['', '']
 tet_list = []
 quick_drop = False
+quick_drop_override = False
 move_left = False
 move_right = False
 move_delay = 0
@@ -775,6 +776,9 @@ while running:
                 pause = True
             elif keys[K_p] and pause:
                 pause = False
+            # Force quick drop
+            if keys[K_u]:
+                quick_drop_override = not quick_drop_override
 
         # Key up events
         if event.type == pygame.KEYUP:
@@ -792,7 +796,7 @@ while running:
 
     # Block updates
     if not pause:
-        if fall_cool_down_timer == 0 or quick_drop:
+        if fall_cool_down_timer == 0 or quick_drop or quick_drop_override:
             drop_blocks()
             fall_tet()
             clear_blocks()
