@@ -8,7 +8,7 @@ clock = pygame.time.Clock()
 frame_rate = 60
 # Screen and game grid dimensions
 screen_height = 600
-grid_rows = 20
+grid_rows = 15
 grid_cols = 10
 grid_size = int(screen_height / grid_rows)
 screen_width = grid_cols * grid_size + 1
@@ -582,7 +582,10 @@ def lock_tet():
     for t in tet_list:
         if not t.locked and t.collide_y(grid_size):
             t.locked = True
-            t.influence = lock_delay
+            if not mondo_mode:
+                t.influence = lock_delay
+            else:
+                t.influence = 0
         if t.influence > 0 and t.collide_y(grid_size):
             t.influence -= 1
         elif t.influence > 0 and not t.collide_y(grid_size):
@@ -892,6 +895,8 @@ while running:
             print('cleared blocks: ' + str(cleared_blocks))
             print('cleared rows: ' + str(int(cleared_blocks / grid_cols)))
 
+    if not mondo_mode:
+        clock.tick(frame_rate)
     pygame.display.flip()
 
 
