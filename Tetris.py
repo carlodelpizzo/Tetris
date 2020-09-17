@@ -8,7 +8,7 @@ clock = pygame.time.Clock()
 frame_rate = 60
 # Screen and game grid dimensions
 screen_height = 600
-grid_rows = 15
+grid_rows = 17
 grid_cols = 10
 grid_size = int(screen_height / grid_rows)
 screen_width = grid_cols * grid_size + 1
@@ -582,10 +582,7 @@ def lock_tet():
     for t in tet_list:
         if not t.locked and t.collide_y(grid_size):
             t.locked = True
-            if not mondo_mode:
-                t.influence = lock_delay
-            else:
-                t.influence = 0
+            t.influence = lock_delay
         if t.influence > 0 and t.collide_y(grid_size):
             t.influence -= 1
         elif t.influence > 0 and not t.collide_y(grid_size):
@@ -593,7 +590,6 @@ def lock_tet():
             t.influence = -1
         elif t.influence == 0 and t.collide_y(grid_size):
             t.commit_self_die()
-            spawn_random_tet(True)
 
 
 def move_tet():
@@ -688,31 +684,6 @@ def round_over():
         print('')
         print('########################################################################################')
     round_frame_count = 0
-    spawn_random_tet(True)
-
-
-def randomly_rotate():
-    roll = random.randint(0, 19)
-    roll2 = random.randint(0, 1)
-    if roll == 0:
-        if roll2 == 0:
-            for t in tet_list:
-                t.rotate()
-        else:
-            for t in tet_list:
-                t.rotate(False)
-
-
-def randomly_move():
-    roll = random.randint(0, 9)
-    roll2 = random.randint(0, 1)
-    if roll == 0:
-        if roll2 == 0:
-            for t in tet_list:
-                t.update_x(grid_size)
-        else:
-            for t in tet_list:
-                t.update_x(-grid_size)
 
 
 score = 0
@@ -725,12 +696,11 @@ falling_blocks = []
 last_spawned_blocks = ['', '']
 tet_list = []
 quick_drop = False
-mondo_mode = False
 move_left = False
 move_right = False
 move_delay = 0
 running = True
-pause = True
+pause = False
 round_frame_count = 0
 global_frame_count = 0
 rounds_played = 0
@@ -758,31 +728,31 @@ while running:
             # Spawn JBlock
             if keys[K_j]:
                 if len(tet_list) == 0:
-                    tet_list.append(JBlock(0, -grid_size))
+                    tet_list.append(JBlock(0, (grid_size * grid_cols) / 2 - grid_size))
             # Spawn LBlock
             if keys[K_l]:
                 if len(tet_list) == 0:
-                    tet_list.append(LBlock(0, -grid_size))
+                    tet_list.append(LBlock(0, (grid_size * grid_cols) / 2 - grid_size))
             # Spawn IBlock
             if keys[K_i]:
                 if len(tet_list) == 0:
-                    tet_list.append(IBlock(0, -grid_size))
+                    tet_list.append(IBlock(0, (grid_size * grid_cols) / 2 - grid_size))
             # Spawn OBlock
             if keys[K_o]:
                 if len(tet_list) == 0:
-                    tet_list.append(OBlock(0, -grid_size))
+                    tet_list.append(OBlock(0, (grid_size * grid_cols) / 2 - grid_size))
             # Spawn SBlock
             if keys[K_s]:
                 if len(tet_list) == 0:
-                    tet_list.append(SBlock(0, -grid_size))
+                    tet_list.append(SBlock(0, (grid_size * grid_cols) / 2 - grid_size))
             # Spawn ZBlock
             if keys[K_z]:
                 if len(tet_list) == 0:
-                    tet_list.append(ZBlock(0, -grid_size))
+                    tet_list.append(ZBlock(0, (grid_size * grid_cols) / 2 - grid_size))
             # Spawn TBlock
             if keys[K_t]:
                 if len(tet_list) == 0:
-                    tet_list.append(TBlock(0, -grid_size))
+                    tet_list.append(TBlock(0, (grid_size * grid_cols) / 2 - grid_size))
             # Rotate falling block
             if keys[K_r]:
                 for tet in tet_list:
@@ -811,9 +781,6 @@ while running:
                 pause = True
             elif keys[K_p] and pause:
                 pause = False
-            # Mondo mode
-            if keys[K_u]:
-                mondo_mode = not mondo_mode
 
         # Key up events
         if event.type == pygame.KEYUP:
@@ -829,12 +796,9 @@ while running:
                 move_delay = 0
                 move_left = False
 
-    if mondo_mode:
-        randomly_move()
-        randomly_rotate()
     # Block updates
     if not pause:
-        if fall_cool_down_timer == 0 or quick_drop or mondo_mode:
+        if fall_cool_down_timer == 0 or quick_drop:
             drop_blocks()
             fall_tet()
             clear_blocks()
@@ -855,12 +819,10 @@ while running:
 
     if not pause:
         round_frame_count += 1
-        global_frame_count += 1
+    global_frame_count += 1
 
-    if not mondo_mode:
-        clock.tick(frame_rate)
+    clock.tick(frame_rate)
     pygame.display.flip()
-
 
 pygame.display.quit()
 pygame.quit()
