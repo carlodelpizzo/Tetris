@@ -184,6 +184,8 @@ class Tet:
             self.correct_off_screen_y()
 
     def commit_self_die(self):
+        global falling_tet
+
         if self.locked and self.influence == 0 and self.y >= 0:
             for i in range(len(self.body)):
                 blocks.append(falling_blocks[self.body[i]])
@@ -191,7 +193,7 @@ class Tet:
             self.body.sort(reverse=True)
             for i in range(len(self.body)):
                 falling_blocks.pop(self.body[i])
-            tet_list.pop(0)
+            falling_tet = None
         elif self.locked and self.influence == 0 and self.y < 0:
             round_over()
 
@@ -574,30 +576,36 @@ def draw_bg_grid(dif_color=None):
 
 
 def fall_tet():
-    for t in tet_list:
-        t.update_y(grid_size)
+    global falling_tet
+
+    if falling_tet is not None:
+        falling_tet.update_y(grid_size)
 
 
 def lock_tet():
-    for t in tet_list:
-        if not t.locked and t.collide_y(grid_size):
-            t.locked = True
-            t.influence = lock_delay
-        if t.influence > 0 and t.collide_y(grid_size):
-            t.influence -= 1
-        elif t.influence > 0 and not t.collide_y(grid_size):
-            t.locked = False
-            t.influence = -1
-        elif t.influence == 0 and t.collide_y(grid_size):
-            t.commit_self_die()
+    global falling_tet
+
+    if falling_tet is not None:
+        if not falling_tet.locked and falling_tet.collide_y(grid_size):
+            falling_tet.locked = True
+            falling_tet.influence = lock_delay
+        if falling_tet.influence > 0 and falling_tet.collide_y(grid_size):
+            falling_tet.influence -= 1
+        elif falling_tet.influence > 0 and not falling_tet.collide_y(grid_size):
+            falling_tet.locked = False
+            falling_tet.influence = -1
+        elif falling_tet.influence == 0 and falling_tet.collide_y(grid_size):
+            falling_tet.commit_self_die()
 
 
 def move_tet():
-    for t in tet_list:
+    global falling_tet
+
+    if falling_tet is not None:
         if move_left:
-            t.update_x(-grid_size)
+            falling_tet.update_x(-grid_size)
         elif move_right:
-            t.update_x(grid_size)
+            falling_tet.update_x(grid_size)
 
 
 def drop_blocks():
@@ -628,9 +636,10 @@ def clear_blocks():
 
 
 def spawn_random_tet(ran_pos=False):
+    global falling_tet
     global last_spawned_blocks
 
-    if len(tet_list) == 0:
+    if falling_tet is None:
         tet_array = [TBlock, JBlock, LBlock, IBlock, OBlock, SBlock, ZBlock]
         tet_array_str = ['TBlock', 'JBlock', 'LBlock', 'IBlock', 'OBlock', 'SBlock', 'ZBlock']
         i = random.randint(0, len(tet_array) - 1)
@@ -652,8 +661,7 @@ def spawn_random_tet(ran_pos=False):
             ran_x = (grid_size * grid_cols) / 2 - grid_size
         ran_x = int(ran_x - (ran_x % grid_size)) - grid_size
 
-        tet_list.append(ran_tet(ran_x, -grid_size * 2))
-        tet_list[len(tet_list) - 1].correct_off_screen_x()
+        falling_tet = (ran_tet(ran_x, -grid_size * 2))
 
         last_spawned_blocks = [last_spawned_blocks[1], tet_array_str[i]]
 
@@ -661,7 +669,7 @@ def spawn_random_tet(ran_pos=False):
 def round_over():
     global blocks
     global falling_blocks
-    global tet_list
+    global falling_tet
     global round_frame_count
     global rounds_played
     global cleared_blocks
@@ -671,7 +679,7 @@ def round_over():
 
     blocks = []
     falling_blocks = []
-    tet_list = []
+    falling_tet = []
     cleared_blocks = 0
 
     if num_active != 0:
@@ -694,7 +702,7 @@ blocks = []
 cleared_blocks = 0
 falling_blocks = []
 last_spawned_blocks = ['', '']
-tet_list = []
+falling_tet = None
 quick_drop = False
 move_left = False
 move_right = False
@@ -727,39 +735,39 @@ while running:
                 break
             # Spawn JBlock
             if keys[K_j]:
-                if len(tet_list) == 0:
-                    tet_list.append(JBlock(0, (grid_size * grid_cols) / 2 - grid_size))
+                if falling_tet is None:
+                    falling_tet = (JBlock(0, (grid_size * grid_cols) / 2 - grid_size))
             # Spawn LBlock
             if keys[K_l]:
-                if len(tet_list) == 0:
-                    tet_list.append(LBlock(0, (grid_size * grid_cols) / 2 - grid_size))
+                if falling_tet is None:
+                    falling_tet = (LBlock(0, (grid_size * grid_cols) / 2 - grid_size))
             # Spawn IBlock
             if keys[K_i]:
-                if len(tet_list) == 0:
-                    tet_list.append(IBlock(0, (grid_size * grid_cols) / 2 - grid_size))
+                if falling_tet is None:
+                    falling_tet = (IBlock(0, (grid_size * grid_cols) / 2 - grid_size))
             # Spawn OBlock
             if keys[K_o]:
-                if len(tet_list) == 0:
-                    tet_list.append(OBlock(0, (grid_size * grid_cols) / 2 - grid_size))
+                if falling_tet is None:
+                    falling_tet = (OBlock(0, (grid_size * grid_cols) / 2 - grid_size))
             # Spawn SBlock
             if keys[K_s]:
-                if len(tet_list) == 0:
-                    tet_list.append(SBlock(0, (grid_size * grid_cols) / 2 - grid_size))
+                if falling_tet is None:
+                    falling_tet = (SBlock(0, (grid_size * grid_cols) / 2 - grid_size))
             # Spawn ZBlock
             if keys[K_z]:
-                if len(tet_list) == 0:
-                    tet_list.append(ZBlock(0, (grid_size * grid_cols) / 2 - grid_size))
+                if falling_tet is None:
+                    falling_tet = (ZBlock(0, (grid_size * grid_cols) / 2 - grid_size))
             # Spawn TBlock
             if keys[K_t]:
-                if len(tet_list) == 0:
-                    tet_list.append(TBlock(0, (grid_size * grid_cols) / 2 - grid_size))
+                if falling_tet is None:
+                    falling_tet = (TBlock(0, (grid_size * grid_cols) / 2 - grid_size))
             # Rotate falling block
             if keys[K_r]:
-                for tet in tet_list:
-                    tet.rotate()
+                if falling_tet is not None:
+                    falling_tet.rotate()
             elif keys[K_e]:
-                for tet in tet_list:
-                    tet.rotate(False)
+                if falling_tet is not None:
+                    falling_tet.rotate(False)
             # Move falling block right
             if keys[K_RIGHT] and not move_right:
                 move_right = True
