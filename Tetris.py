@@ -6,14 +6,13 @@ import random
 pygame.init()
 clock = pygame.time.Clock()
 frame_rate = 60
-# Screen
-# screen_width = 500
+# Screen and game grid dimensions
 screen_height = 600
-grid_rows = 25
-grid_cols = 20
+grid_rows = 20
+grid_cols = 10
 grid_size = int(screen_height / grid_rows)
-screen_width = grid_cols * grid_size
-screen_height = grid_rows * grid_size
+screen_width = grid_cols * grid_size + 1
+screen_height = grid_rows * grid_size + 1
 screen = pygame.display.set_mode((screen_width, screen_height))
 # Title
 pygame.display.set_caption('Tetris for Ashton')
@@ -43,38 +42,47 @@ class Block:
         self.height = grid_size
         self.locked = False
         self.color = white
-        self.index = None
-        self.cleared = False
         self.drop = 0
         self.type = tet_type
+        self.pos = [0, 0]
 
     def draw(self):
-        if not self.cleared:
-            accent0 = [self.color[0] * 0.2, self.color[1] * 0.2, self.color[2] * 0.2]
-            accent1 = [self.color[0] * 0.4, self.color[1] * 0.4, self.color[2] * 0.4]
-            accent2 = [self.color[0] * 0.6, self.color[1] * 0.6, self.color[2] * 0.6]
-            accent3 = [self.color[0] * 0.8, self.color[1] * 0.8, self.color[2] * 0.8]
-            pygame.draw.rect(screen, accent0, (self.x, self.y, self.height, self.width))
-            pygame.draw.rect(screen, accent1, (self.x + 1, self.y + 1, self.height - 2, self.width - 2))
-            pygame.draw.rect(screen, accent2, (self.x + 3, self.y + 3, self.height - 6, self.width - 6))
-            pygame.draw.rect(screen, accent3, (self.x + 4, self.y + 4, self.height - 8, self.width - 8))
-            pygame.draw.rect(screen, self.color, (self.x + 5, self.y + 5, self.height - 10, self.width - 10))
+        accent0 = [self.color[0] * 0.2, self.color[1] * 0.2, self.color[2] * 0.2]
+        accent1 = [self.color[0] * 0.4, self.color[1] * 0.4, self.color[2] * 0.4]
+        accent2 = [self.color[0] * 0.6, self.color[1] * 0.6, self.color[2] * 0.6]
+        accent3 = [self.color[0] * 0.8, self.color[1] * 0.8, self.color[2] * 0.8]
+        pygame.draw.rect(screen, accent0, (self.x, self.y, self.height, self.width))
+        pygame.draw.rect(screen, accent1, (self.x + 1, self.y + 1, self.height - 2, self.width - 2))
+        pygame.draw.rect(screen, accent2, (self.x + 3, self.y + 3, self.height - 6, self.width - 6))
+        pygame.draw.rect(screen, accent3, (self.x + 4, self.y + 4, self.height - 8, self.width - 8))
+        pygame.draw.rect(screen, self.color, (self.x + 5, self.y + 5, self.height - 10, self.width - 10))
 
     def lock(self):
         if not self.locked:
             self.change_color()
             self.locked = True
-            self.index = int((self.y / grid_size) * grid_cols + (self.x / grid_size))
-            grid_array[self.index] = 1
+            temp_row = grid_rows - int(self.y / grid_size)
+            temp_col = int(self.x / grid_size) + 1
+            if 1 <= temp_row <= grid_rows and 1 <= temp_col <= grid_cols:
+                for blk in blocks:
+                    if blk is self:
+                        continue
+                    if blk.pos == self.pos:
+                        return
+                self.pos = [temp_row, temp_col]
 
     def unlock(self):
         if self.locked:
             self.locked = False
-            grid_array[self.index] = 0
+            self.pos = [0, 0]
 
     def clear(self):
-        self.cleared = True
-        grid_array[self.index] = 0
+        global cleared_blocks
+        for blk in blocks:
+            if blk.locked and blk.x == self.x and blk.y < self.y:
+                blk.drop += 1
+        cleared_blocks += 1
+        blocks.pop(blocks.index(self))
 
     def change_color(self):
         if self.type == '':
@@ -131,11 +139,10 @@ class Tet:
                 collide = True
                 break
             for bi in range(len(blocks)):
-                if not blocks[bi].cleared:
-                    if falling_blocks[self.body[i]].y + y_offset == blocks[bi].y and \
-                            falling_blocks[self.body[i]].x == blocks[bi].x:
-                        collide = True
-                        break
+                if falling_blocks[self.body[i]].y + y_offset == blocks[bi].y and \
+                        falling_blocks[self.body[i]].x == blocks[bi].x:
+                    collide = True
+                    break
         if collide:
             return True
         else:
@@ -144,8 +151,6 @@ class Tet:
     def collide_block(self, x_mod=0, y_mod=0):
         for i in range(len(self.body)):
             for blk in blocks:
-                if blk.cleared:
-                    continue
                 if falling_blocks[self.body[i]].x + x_mod == blk.x and falling_blocks[self.body[i]].y + y_mod == blk.y:
                     return True
 
@@ -179,7 +184,7 @@ class Tet:
             self.correct_off_screen_y()
 
     def commit_self_die(self):
-        if self.locked and self.influence == 0:
+        if self.locked and self.influence == 0 and self.y >= 0:
             for i in range(len(self.body)):
                 blocks.append(falling_blocks[self.body[i]])
                 blocks[len(blocks) - 1].lock()
@@ -187,6 +192,8 @@ class Tet:
             for i in range(len(self.body)):
                 falling_blocks.pop(self.body[i])
             tet_list.pop(0)
+        elif self.locked and self.influence == 0 and self.y < 0:
+            round_over()
 
 
 class TBlock(Tet):
@@ -575,10 +582,7 @@ def lock_tet():
     for t in tet_list:
         if not t.locked and t.collide_y(grid_size):
             t.locked = True
-            if mondo_mode:
-                t.influence = 0
-            else:
-                t.influence = lock_delay
+            t.influence = lock_delay
         if t.influence > 0 and t.collide_y(grid_size):
             t.influence -= 1
         elif t.influence > 0 and not t.collide_y(grid_size):
@@ -586,10 +590,7 @@ def lock_tet():
             t.influence = -1
         elif t.influence == 0 and t.collide_y(grid_size):
             t.commit_self_die()
-            if mondo_mode:
-                spawn_random_tet(True)
-            else:
-                spawn_random_tet()
+            spawn_random_tet(True)
 
 
 def move_tet():
@@ -610,58 +611,78 @@ def drop_blocks():
 
 
 def clear_blocks():
-    for row in range(int(len(grid_array) / grid_cols)):
-        temp_list = []
-        for col in range(0, grid_cols):
-            if grid_array[(row * grid_cols) + col] == 1:
-                temp_list.append((row * grid_cols) + col)
-            else:
-                temp_list = []
-            y_threshold = -1
-            if len(temp_list) == grid_cols:
-                for blk in blocks:
-                    if blk.index in temp_list:
-                        blk.clear()
-                        if blk.y < y_threshold or y_threshold == -1:
-                            y_threshold = blk.y
-                if y_threshold != -1:
-                    for blk in blocks:
-                        if not blk.cleared and blk.locked and blk.y < y_threshold:
-                            blk.drop += 1
+    temp_array = []
+    temp_block_array = []
     for blk in blocks:
-        if blk.locked and blk.y < 0:
-            round_over()
+        if blk.locked and blk.pos[0] != 0:
+            temp_array.append(blk.pos[0])
+            temp_block_array.append(blk)
+    # strings = []
+    for i in range(1, grid_rows + 1):
+        if temp_array.count(i) == grid_cols:
+            for z in range(len(temp_array)):
+                if temp_array[z] == i:
+                    temp_block_array[z].clear()
+    #     string = 'r' + str(i) + ':' + str(temp_array.count(i))
+    #     strings.append(string)
+    # print(strings)
 
 
+last_pos = [-1, -1, -1]
 def spawn_random_tet(ran_pos=False):
-    global last_spawned_blocks
-
+    global last_pos
+    # Only OBlocks
     if len(tet_list) == 0:
-        tet_array = [TBlock, JBlock, LBlock, IBlock, OBlock, SBlock, ZBlock]
-        tet_array_str = ['TBlock', 'JBlock', 'LBlock', 'IBlock', 'OBlock', 'SBlock', 'ZBlock']
-        i = random.randint(0, len(tet_array) - 1)
-        # Prevent same block 3 times in a row
-        if tet_array_str[i] == last_spawned_blocks[0] and tet_array_str[i] == last_spawned_blocks[1]:
-            spawn_random_tet()
-            return
-        # 2/3 chance to re-roll if same block as last
-        elif tet_array_str[i] == last_spawned_blocks[1]:
-            roll = random.randint(0, 2)
-            if roll > 0:
-                last_spawned_blocks = [last_spawned_blocks[1], tet_array_str[i]]
-                spawn_random_tet()
-                return
-        ran_tet = tet_array[i]
         if ran_pos:
             ran_x = random.randint(0, grid_size * grid_cols)
+            if ran_x % grid_size >= 0.5:
+                ran_x = int(ran_x - (ran_x % grid_size)) + grid_size
+            else:
+                ran_x = int(ran_x - (ran_x % grid_size))
+            if ran_x % (grid_size * 2) != 0:
+                ran_x -= grid_size
+            if ran_x >= grid_size * grid_cols - grid_size:
+                flip = random.randint(0, 1)
+                if flip == 0:
+                    ran_x = grid_size * grid_cols - grid_size * 2
+                else:
+                    ran_x = 0
+
+            if last_pos[0] == ran_x or last_pos[1] == ran_x or last_pos[2] == ran_x:
+                spawn_random_tet(True)
+                return
         else:
-            ran_x = (grid_size * grid_cols) / 2 - grid_size
-        ran_x = int(ran_x - (ran_x % grid_size)) - grid_size
-
-        tet_list.append(ran_tet(ran_x, -grid_size * 2))
-        tet_list[len(tet_list) - 1].correct_off_screen_x()
-
-        last_spawned_blocks = [last_spawned_blocks[1], tet_array_str[i]]
+            ran_x = int((grid_size * grid_cols) / 2 - grid_size)
+        tet_list.append(OBlock(ran_x, -grid_size * 2))
+        last_pos = [last_pos[1], last_pos[2], ran_x]
+    # global last_spawned_blocks
+    #
+    # if len(tet_list) == 0:
+    #     tet_array = [TBlock, JBlock, LBlock, IBlock, OBlock, SBlock, ZBlock]
+    #     tet_array_str = ['TBlock', 'JBlock', 'LBlock', 'IBlock', 'OBlock', 'SBlock', 'ZBlock']
+    #     i = random.randint(0, len(tet_array) - 1)
+    #     # Prevent same block 3 times in a row
+    #     if tet_array_str[i] == last_spawned_blocks[0] and tet_array_str[i] == last_spawned_blocks[1]:
+    #         spawn_random_tet()
+    #         return
+    #     # 2/3 chance to re-roll if same block as last
+    #     elif tet_array_str[i] == last_spawned_blocks[1]:
+    #         roll = random.randint(0, 2)
+    #         if roll > 0:
+    #             last_spawned_blocks = [last_spawned_blocks[1], tet_array_str[i]]
+    #             spawn_random_tet()
+    #             return
+    #     ran_tet = tet_array[i]
+    #     if ran_pos:
+    #         ran_x = random.randint(0, grid_size * grid_cols)
+    #     else:
+    #         ran_x = (grid_size * grid_cols) / 2 - grid_size
+    #     ran_x = int(ran_x - (ran_x % grid_size)) - grid_size
+    #
+    #     tet_list.append(ran_tet(ran_x, -grid_size * 2))
+    #     tet_list[len(tet_list) - 1].correct_off_screen_x()
+    #
+    #     last_spawned_blocks = [last_spawned_blocks[1], tet_array_str[i]]
 
 
 def round_over():
@@ -670,28 +691,33 @@ def round_over():
     global tet_list
     global round_frame_count
     global rounds_played
+    global cleared_blocks
+    global temp1
+    global temp2
 
-    num_clear = 0
-    for blk in blocks:
-        if blk.cleared:
-            num_clear += 1
-    num_active = int(len(blocks) - num_clear)
-    num_clear = int(num_clear / grid_cols)
+    temp1 = 0
+    temp2 = 0
+
+    num_active = int(len(blocks))
+    num_clear = int(cleared_blocks / grid_cols)
+
     blocks = []
     falling_blocks = []
     tet_list = []
+    cleared_blocks = 0
 
-    for i in range(len(grid_array)):
-        grid_array[i] = 0
     if num_active != 0:
         rounds_played += 1
+        print('')
+        print('########################################################################################')
+        print('')
         print('cleared rows: ' + str(num_clear) + ', uncleared blocks: ' + str(num_active) + ', t: ' +
               str(round_frame_count) + ', Gt: ' + str(global_frame_count) + ', Rounds: ' + str(rounds_played))
+        print('')
+        print('########################################################################################')
+        print('')
     round_frame_count = 0
-    if mondo_mode:
-        spawn_random_tet(True)
-    else:
-        spawn_random_tet()
+    spawn_random_tet(True)
 
 
 def randomly_rotate():
@@ -718,16 +744,12 @@ def randomly_move():
                 t.update_x(-grid_size)
 
 
-grid_array = []
-for r in range(0, grid_cols):
-    for c in range(0, grid_rows):
-        grid_array.append(0)
-
 score = 0
 fall_cool_down_timer = 0
 fall_cool_down = frame_rate / 2
 lock_delay = frame_rate / 2
 blocks = []
+cleared_blocks = 0
 falling_blocks = []
 last_spawned_blocks = ['', '']
 tet_list = []
@@ -741,15 +763,18 @@ pause = True
 round_frame_count = 0
 global_frame_count = 0
 rounds_played = 0
+temp1 = 0
+temp2 = 0
 while running:
     screen.fill(black)
     if pause:
         draw_bg_grid(pink)
     else:
         draw_bg_grid()
+
     # Event loop
     for event in pygame.event.get():
-        # Close window
+        # Press close button
         if event.type == pygame.QUIT:
             running = False
             break
@@ -820,7 +845,6 @@ while running:
             # Mondo mode
             if keys[K_u]:
                 mondo_mode = not mondo_mode
-                spawn_random_tet(True)
 
         # Key up events
         if event.type == pygame.KEYUP:
@@ -850,10 +874,7 @@ while running:
             move_tet()
         elif move_delay > 0:
             move_delay -= 1
-    # For testing
-    if mondo_mode:
-        randomly_rotate()
-        randomly_move()
+
     # Draw blocks
     for block in blocks:
         block.draw()
@@ -863,10 +884,15 @@ while running:
     if not pause:
         round_frame_count += 1
         global_frame_count += 1
-    # if round_frame_count > 5000:
-    #     round_over()
-    if not mondo_mode:
-        clock.tick(frame_rate)
+    elif pause:
+        if temp1 != len(blocks) or temp2 != cleared_blocks:
+            temp1 = len(blocks)
+            temp2 = cleared_blocks
+            print('------------------------')
+            print('active blocks:  ' + str(len(blocks)))
+            print('cleared blocks: ' + str(cleared_blocks))
+            print('cleared rows: ' + str(int(cleared_blocks / grid_cols)))
+
     pygame.display.flip()
 
 
