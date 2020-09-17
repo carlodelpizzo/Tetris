@@ -36,10 +36,10 @@ main_font = pygame.font.SysFont(font_face, font_size)
 
 class Block:
     def __init__(self, x, y, tet_type=''):
-        self.x = x
-        self.y = y
-        self.width = grid_size
-        self.height = grid_size
+        self.x = int(x)
+        self.y = int(y)
+        self.width = int(grid_size)
+        self.height = int(grid_size)
         self.locked = False
         self.color = white
         self.drop = 0
@@ -65,9 +65,7 @@ class Block:
             temp_col = int(self.x / grid_size) + 1
             if 1 <= temp_row <= grid_rows and 1 <= temp_col <= grid_cols:
                 for blk in blocks:
-                    if blk is self:
-                        continue
-                    if blk.pos == self.pos:
+                    if blk is not self and blk.pos == self.pos:
                         return
                 self.pos = [temp_row, temp_col]
 
@@ -195,7 +193,7 @@ class Tet:
                 falling_blocks.pop(self.body[i])
             falling_tet = None
         elif self.locked and self.influence == 0 and self.y < 0:
-            round_over()
+            end_round()
 
 
 class TBlock(Tet):
@@ -596,7 +594,7 @@ def lock_tet():
             falling_tet.influence = -1
         elif falling_tet.influence == 0 and falling_tet.collide_y(grid_size):
             falling_tet.commit_self_die()
-            spawn_random_tet()
+            # spawn_random_tet()
 
 
 def move_tet():
@@ -626,7 +624,7 @@ def clear_blocks():
             temp_array.append(blk.pos[0])
             temp_block_array.append(blk)
     # strings = []
-    for i in range(1, grid_rows + 1):
+    for i in range(1, grid_rows):
         if temp_array.count(i) == grid_cols:
             for z in range(len(temp_array)):
                 if temp_array[z] == i:
@@ -644,6 +642,7 @@ def spawn_random_tet(ran_pos=False):
         tet_array = [TBlock, JBlock, LBlock, IBlock, OBlock, SBlock, ZBlock]
         tet_array_str = ['TBlock', 'JBlock', 'LBlock', 'IBlock', 'OBlock', 'SBlock', 'ZBlock']
         i = random.randint(0, len(tet_array) - 1)
+
         # Prevent same block 3 times in a row
         if tet_array_str[i] == last_spawned_tet[0] and tet_array_str[i] == last_spawned_tet[1]:
             spawn_random_tet()
@@ -655,19 +654,21 @@ def spawn_random_tet(ran_pos=False):
                 last_spawned_tet = [last_spawned_tet[1], tet_array_str[i]]
                 spawn_random_tet()
                 return
-        ran_tet = tet_array[i]
+
         if ran_pos:
             ran_x = random.randint(0, grid_size * grid_cols)
         else:
             ran_x = (grid_size * grid_cols) / 2 - grid_size
-        ran_x = int(ran_x - (ran_x % grid_size)) - grid_size
+        if tet_array_str[i] == 'IBlock':
+            ran_x -= grid_size
+        ran_x = int(ran_x - (ran_x % grid_size))
 
-        falling_tet = (ran_tet(ran_x, -grid_size * 2))
+        falling_tet = (tet_array[i](ran_x, -grid_size * 2))
 
         last_spawned_tet = [last_spawned_tet[1], tet_array_str[i]]
 
 
-def round_over():
+def end_round():
     global blocks
     global falling_blocks
     global falling_tet
@@ -718,7 +719,7 @@ cleared_blocks_count = 0
 running = True
 paused = False
 
-spawn_random_tet()
+# spawn_random_tet()
 while running:
     screen.fill(black)
     if paused:
@@ -743,31 +744,31 @@ while running:
             # Spawn JBlock
             if keys[K_j]:
                 if falling_tet is None:
-                    falling_tet = (JBlock(0, (grid_size * grid_cols) / 2 - grid_size))
+                    falling_tet = JBlock((grid_size * grid_cols) / 2 - grid_size, -grid_size * 2)
             # Spawn LBlock
             if keys[K_l]:
                 if falling_tet is None:
-                    falling_tet = (LBlock(0, (grid_size * grid_cols) / 2 - grid_size))
+                    falling_tet = LBlock((grid_size * grid_cols) / 2 - grid_size, -grid_size * 2)
             # Spawn IBlock
             if keys[K_i]:
                 if falling_tet is None:
-                    falling_tet = (IBlock(0, (grid_size * grid_cols) / 2 - grid_size))
+                    falling_tet = IBlock((grid_size * grid_cols) / 2 - grid_size * 2, -grid_size * 2)
             # Spawn OBlock
             if keys[K_o]:
                 if falling_tet is None:
-                    falling_tet = (OBlock(0, (grid_size * grid_cols) / 2 - grid_size))
+                    falling_tet = OBlock((grid_size * grid_cols) / 2 - grid_size, -grid_size * 2)
             # Spawn SBlock
             if keys[K_s]:
                 if falling_tet is None:
-                    falling_tet = (SBlock(0, (grid_size * grid_cols) / 2 - grid_size))
+                    falling_tet = SBlock((grid_size * grid_cols) / 2 - grid_size, -grid_size * 2)
             # Spawn ZBlock
             if keys[K_z]:
                 if falling_tet is None:
-                    falling_tet = (ZBlock(0, (grid_size * grid_cols) / 2 - grid_size))
+                    falling_tet = ZBlock((grid_size * grid_cols) / 2 - grid_size, -grid_size * 2)
             # Spawn TBlock
             if keys[K_t]:
                 if falling_tet is None:
-                    falling_tet = (TBlock(0, (grid_size * grid_cols) / 2 - grid_size))
+                    falling_tet = TBlock((grid_size * grid_cols) / 2 - grid_size, -grid_size * 2)
             # Rotate falling block
             if keys[K_r]:
                 if falling_tet is not None:
@@ -816,7 +817,6 @@ while running:
         if fall_cool_down_timer == 0 or quick_drop:
             drop_blocks()
             fall_tet()
-            clear_blocks()
             fall_cool_down_timer = fall_cool_down
         elif fall_cool_down_timer > 0:
             fall_cool_down_timer -= 1
@@ -825,6 +825,7 @@ while running:
             move_tet()
         elif move_delay_timer > 0:
             move_delay_timer -= 1
+    clear_blocks()
 
     # Draw blocks
     for block in blocks:
