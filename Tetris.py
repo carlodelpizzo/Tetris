@@ -77,11 +77,11 @@ class Block:
             self.pos = [0, 0]
 
     def clear(self):
-        global cleared_blocks
+        global cleared_blocks_count
         for blk in blocks:
             if blk.locked and blk.x == self.x and blk.y < self.y:
                 blk.drop += 1
-        cleared_blocks += 1
+        cleared_blocks_count += 1
         blocks.pop(blocks.index(self))
 
     def change_color(self):
@@ -596,6 +596,7 @@ def lock_tet():
             falling_tet.influence = -1
         elif falling_tet.influence == 0 and falling_tet.collide_y(grid_size):
             falling_tet.commit_self_die()
+            spawn_random_tet()
 
 
 def move_tet():
@@ -637,21 +638,21 @@ def clear_blocks():
 
 def spawn_random_tet(ran_pos=False):
     global falling_tet
-    global last_spawned_blocks
+    global last_spawned_tet
 
     if falling_tet is None:
         tet_array = [TBlock, JBlock, LBlock, IBlock, OBlock, SBlock, ZBlock]
         tet_array_str = ['TBlock', 'JBlock', 'LBlock', 'IBlock', 'OBlock', 'SBlock', 'ZBlock']
         i = random.randint(0, len(tet_array) - 1)
         # Prevent same block 3 times in a row
-        if tet_array_str[i] == last_spawned_blocks[0] and tet_array_str[i] == last_spawned_blocks[1]:
+        if tet_array_str[i] == last_spawned_tet[0] and tet_array_str[i] == last_spawned_tet[1]:
             spawn_random_tet()
             return
         # 2/3 chance to re-roll if same block as last
-        elif tet_array_str[i] == last_spawned_blocks[1]:
+        elif tet_array_str[i] == last_spawned_tet[1]:
             roll = random.randint(0, 2)
             if roll > 0:
-                last_spawned_blocks = [last_spawned_blocks[1], tet_array_str[i]]
+                last_spawned_tet = [last_spawned_tet[1], tet_array_str[i]]
                 spawn_random_tet()
                 return
         ran_tet = tet_array[i]
@@ -663,58 +664,64 @@ def spawn_random_tet(ran_pos=False):
 
         falling_tet = (ran_tet(ran_x, -grid_size * 2))
 
-        last_spawned_blocks = [last_spawned_blocks[1], tet_array_str[i]]
+        last_spawned_tet = [last_spawned_tet[1], tet_array_str[i]]
 
 
 def round_over():
     global blocks
     global falling_blocks
     global falling_tet
-    global round_frame_count
-    global rounds_played
-    global cleared_blocks
+    global round_frame_timer
+    global rounds_played_count
+    global cleared_blocks_count
 
     num_active = int(len(blocks))
-    num_clear = int(cleared_blocks / grid_cols)
+    num_clear = int(cleared_blocks_count / grid_cols)
 
     blocks = []
     falling_blocks = []
-    falling_tet = []
-    cleared_blocks = 0
+    falling_tet = None
+    cleared_blocks_count = 0
 
     if num_active != 0:
-        rounds_played += 1
+        rounds_played_count += 1
         print('########################################################################################')
         print('')
         print('cleared rows: ' + str(num_clear) + ', active blocks: ' + str(num_active) +
-              ', round frames: ' + str(round_frame_count) + ', global frames: ' + str(global_frame_count) +
-              ', round: ' + str(rounds_played))
+              ', round frames: ' + str(round_frame_timer) + ', global frames: ' + str(global_frame_timer) +
+              ', round: ' + str(rounds_played_count))
         print('')
         print('########################################################################################')
-    round_frame_count = 0
+    round_frame_timer = 0
+    spawn_random_tet()
 
 
-score = 0
-fall_cool_down_timer = 0
 fall_cool_down = frame_rate / 2
 lock_delay = frame_rate / 2
+
 blocks = []
-cleared_blocks = 0
 falling_blocks = []
-last_spawned_blocks = ['', '']
+last_spawned_tet = ['', '']
 falling_tet = None
+
 quick_drop = False
 move_left = False
 move_right = False
-move_delay = 0
+
+move_delay_timer = 0
+fall_cool_down_timer = 0
+round_frame_timer = 0
+global_frame_timer = 0
+rounds_played_count = 0
+cleared_blocks_count = 0
+
 running = True
-pause = False
-round_frame_count = 0
-global_frame_count = 0
-rounds_played = 0
+paused = False
+
+spawn_random_tet()
 while running:
     screen.fill(black)
-    if pause:
+    if paused:
         draw_bg_grid(pink)
     else:
         draw_bg_grid()
@@ -772,12 +779,12 @@ while running:
             if keys[K_RIGHT] and not move_right:
                 move_right = True
                 move_tet()
-                move_delay = frame_rate / 4
+                move_delay_timer = frame_rate / 4
             # Move falling block left
             if keys[K_LEFT] and not move_left:
                 move_left = True
                 move_tet()
-                move_delay = frame_rate / 4
+                move_delay_timer = frame_rate / 4
             # Turn on quick drop
             if keys[K_DOWN] and not quick_drop:
                 quick_drop = True
@@ -785,10 +792,10 @@ while running:
             if keys[K_SPACE]:
                 spawn_random_tet()
             # Pause
-            if keys[K_p] and not pause:
-                pause = True
-            elif keys[K_p] and pause:
-                pause = False
+            if keys[K_p] and not paused:
+                paused = True
+            elif keys[K_p] and paused:
+                paused = False
 
         # Key up events
         if event.type == pygame.KEYUP:
@@ -797,15 +804,15 @@ while running:
                 quick_drop = False
             # Stop move falling block right
             if not keys[K_RIGHT] and move_right:
-                move_delay = 0
+                move_delay_timer = 0
                 move_right = False
             # Stop move falling block left
             if not keys[K_LEFT] and move_left:
-                move_delay = 0
+                move_delay_timer = 0
                 move_left = False
 
     # Block updates
-    if not pause:
+    if not paused:
         if fall_cool_down_timer == 0 or quick_drop:
             drop_blocks()
             fall_tet()
@@ -814,10 +821,10 @@ while running:
         elif fall_cool_down_timer > 0:
             fall_cool_down_timer -= 1
         lock_tet()
-        if move_delay == 0:
+        if move_delay_timer == 0:
             move_tet()
-        elif move_delay > 0:
-            move_delay -= 1
+        elif move_delay_timer > 0:
+            move_delay_timer -= 1
 
     # Draw blocks
     for block in blocks:
@@ -825,9 +832,9 @@ while running:
     for block in falling_blocks:
         block.draw()
 
-    if not pause:
-        round_frame_count += 1
-    global_frame_count += 1
+    if not paused:
+        round_frame_timer += 1
+    global_frame_timer += 1
 
     clock.tick(frame_rate)
     pygame.display.flip()
