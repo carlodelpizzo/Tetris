@@ -9,7 +9,7 @@ frame_rate = 60
 # Screen and game grid dimensions
 screen_width = 600
 screen_height = 700
-screen = pygame.display.set_mode((screen_width, screen_height))
+screen = pygame.display.set_mode((screen_width, screen_height), RESIZABLE)
 # Title
 pygame.display.set_caption('Tetris for Ashton')
 # Colors
@@ -40,8 +40,25 @@ class GameGrid:
         self.y_unit = int(height / rows)
         self.width = self.x_unit * cols
         self.height = self.y_unit * rows
-        self.right_edge = x + self.width
-        self.bottom = y + self.height
+        self.right_edge = self.x + self.width
+        self.bottom = self.y + self.height
+
+    def move_pos(self, x_offset, y_offset):
+        global  falling_tet
+
+        self.x += x_offset
+        self.y += y_offset
+        self.right_edge = self.x + self.width
+        self.bottom = self.y + self.height
+        for blk in blocks:
+            blk.x += x_offset
+            blk.y += y_offset
+        for blk in falling_blocks:
+            blk.x += x_offset
+            blk.y += y_offset
+        if falling_tet is not None:
+            falling_tet.x += x_offset
+            falling_tet.y += y_offset
 
 
 class Block:
@@ -122,7 +139,7 @@ class Tet:
         self.locked = False
         self.influence = -1
 
-    def update_x(self, x_offset):
+    def move_x(self, x_offset):
         edge = False
         for i in range(len(self.body)):
             if falling_blocks[self.body[i]].x + x_offset >= grid.right_edge or \
@@ -136,7 +153,7 @@ class Tet:
                 falling_blocks[self.body[i]].x += x_offset
             self.x += x_offset
 
-    def update_y(self, y_offset):
+    def move_y(self, y_offset):
         if not self.collide_y(y_offset):
             for i in range(len(self.body)):
                 falling_blocks[self.body[i]].y += y_offset
@@ -589,7 +606,7 @@ def fall_tet():
     global falling_tet
 
     if falling_tet is not None:
-        falling_tet.update_y(grid.y_unit)
+        falling_tet.move_y(grid.y_unit)
 
 
 def lock_tet():
@@ -614,9 +631,9 @@ def move_tet():
 
     if falling_tet is not None:
         if move_left:
-            falling_tet.update_x(-grid.x_unit)
+            falling_tet.move_x(-grid.x_unit)
         elif move_right:
-            falling_tet.update_x(grid.x_unit)
+            falling_tet.move_x(grid.x_unit)
 
 
 def drop_blocks():
@@ -710,6 +727,14 @@ def round_over():
     spawn_timer = frame_rate * 4
 
 
+def mouse_click():
+    global mouse_pos
+    mouse_pos = pygame.mouse.get_pos()
+
+    # Move game grid to mouse pos
+    grid.move_pos(mouse_pos[0] - grid.x, mouse_pos[1] - grid.y)
+
+
 # Game grid
 grid_rows = 15
 grid_cols = 10
@@ -733,6 +758,7 @@ quick_drop = False
 move_left = False
 move_right = False
 allow_spawn = False
+mouse_hold = False
 
 # Timers and counters
 move_delay_timer = 0
@@ -839,8 +865,29 @@ while running:
                 move_delay_timer = 0
                 move_left = False
 
-    spawn_random_tet()
+        # Mouse down event
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:
+                mouse_hold = True
+                mouse_pos = pygame.mouse.get_pos()
+                grid.move_pos(mouse_pos[0] - grid.x, mouse_pos[1] - grid.y)
+
+        # Mouse up event
+        if event.type == pygame.MOUSEBUTTONUP:
+            mouse_hold = False
+
+        # Window resize event
+        if event.type == pygame.VIDEORESIZE:
+            screen_width = event.w
+            screen_height = event.h
+            screen = pygame.display.set_mode((screen_width, screen_height), RESIZABLE)
+
+    # Mouse actions
+    if mouse_hold:
+        mouse_click()
+
     # Block updates
+    spawn_random_tet()
     if not paused:
         if fall_cool_down_timer == 0 or quick_drop:
             drop_blocks()
