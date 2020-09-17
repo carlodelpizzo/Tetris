@@ -631,61 +631,35 @@ def clear_blocks():
     # print(strings)
 
 
-last_pos = [-1, -1, -1]
 def spawn_random_tet(ran_pos=False):
-    global last_pos
-    # Only OBlocks
+    global last_spawned_blocks
+
     if len(tet_list) == 0:
+        tet_array = [TBlock, JBlock, LBlock, IBlock, OBlock, SBlock, ZBlock]
+        tet_array_str = ['TBlock', 'JBlock', 'LBlock', 'IBlock', 'OBlock', 'SBlock', 'ZBlock']
+        i = random.randint(0, len(tet_array) - 1)
+        # Prevent same block 3 times in a row
+        if tet_array_str[i] == last_spawned_blocks[0] and tet_array_str[i] == last_spawned_blocks[1]:
+            spawn_random_tet()
+            return
+        # 2/3 chance to re-roll if same block as last
+        elif tet_array_str[i] == last_spawned_blocks[1]:
+            roll = random.randint(0, 2)
+            if roll > 0:
+                last_spawned_blocks = [last_spawned_blocks[1], tet_array_str[i]]
+                spawn_random_tet()
+                return
+        ran_tet = tet_array[i]
         if ran_pos:
             ran_x = random.randint(0, grid_size * grid_cols)
-            if ran_x % grid_size >= 0.5:
-                ran_x = int(ran_x - (ran_x % grid_size)) + grid_size
-            else:
-                ran_x = int(ran_x - (ran_x % grid_size))
-            if ran_x % (grid_size * 2) != 0:
-                ran_x -= grid_size
-            if ran_x >= grid_size * grid_cols - grid_size:
-                flip = random.randint(0, 1)
-                if flip == 0:
-                    ran_x = grid_size * grid_cols - grid_size * 2
-                else:
-                    ran_x = 0
-
-            if last_pos[0] == ran_x or last_pos[1] == ran_x or last_pos[2] == ran_x:
-                spawn_random_tet(True)
-                return
         else:
-            ran_x = int((grid_size * grid_cols) / 2 - grid_size)
-        tet_list.append(OBlock(ran_x, -grid_size * 2))
-        last_pos = [last_pos[1], last_pos[2], ran_x]
-    # global last_spawned_blocks
-    #
-    # if len(tet_list) == 0:
-    #     tet_array = [TBlock, JBlock, LBlock, IBlock, OBlock, SBlock, ZBlock]
-    #     tet_array_str = ['TBlock', 'JBlock', 'LBlock', 'IBlock', 'OBlock', 'SBlock', 'ZBlock']
-    #     i = random.randint(0, len(tet_array) - 1)
-    #     # Prevent same block 3 times in a row
-    #     if tet_array_str[i] == last_spawned_blocks[0] and tet_array_str[i] == last_spawned_blocks[1]:
-    #         spawn_random_tet()
-    #         return
-    #     # 2/3 chance to re-roll if same block as last
-    #     elif tet_array_str[i] == last_spawned_blocks[1]:
-    #         roll = random.randint(0, 2)
-    #         if roll > 0:
-    #             last_spawned_blocks = [last_spawned_blocks[1], tet_array_str[i]]
-    #             spawn_random_tet()
-    #             return
-    #     ran_tet = tet_array[i]
-    #     if ran_pos:
-    #         ran_x = random.randint(0, grid_size * grid_cols)
-    #     else:
-    #         ran_x = (grid_size * grid_cols) / 2 - grid_size
-    #     ran_x = int(ran_x - (ran_x % grid_size)) - grid_size
-    #
-    #     tet_list.append(ran_tet(ran_x, -grid_size * 2))
-    #     tet_list[len(tet_list) - 1].correct_off_screen_x()
-    #
-    #     last_spawned_blocks = [last_spawned_blocks[1], tet_array_str[i]]
+            ran_x = (grid_size * grid_cols) / 2 - grid_size
+        ran_x = int(ran_x - (ran_x % grid_size)) - grid_size
+
+        tet_list.append(ran_tet(ran_x, -grid_size * 2))
+        tet_list[len(tet_list) - 1].correct_off_screen_x()
+
+        last_spawned_blocks = [last_spawned_blocks[1], tet_array_str[i]]
 
 
 def round_over():
@@ -695,11 +669,6 @@ def round_over():
     global round_frame_count
     global rounds_played
     global cleared_blocks
-    global temp1
-    global temp2
-
-    temp1 = 0
-    temp2 = 0
 
     num_active = int(len(blocks))
     num_clear = int(cleared_blocks / grid_cols)
@@ -765,8 +734,6 @@ pause = True
 round_frame_count = 0
 global_frame_count = 0
 rounds_played = 0
-temp1 = 0
-temp2 = 0
 while running:
     screen.fill(black)
     if pause:
@@ -862,6 +829,9 @@ while running:
                 move_delay = 0
                 move_left = False
 
+    if mondo_mode:
+        randomly_move()
+        randomly_rotate()
     # Block updates
     if not pause:
         if fall_cool_down_timer == 0 or quick_drop or mondo_mode:
@@ -886,14 +856,6 @@ while running:
     if not pause:
         round_frame_count += 1
         global_frame_count += 1
-    elif pause:
-        if temp1 != len(blocks) or temp2 != cleared_blocks:
-            temp1 = len(blocks)
-            temp2 = cleared_blocks
-            print('------------------------')
-            print('active blocks:  ' + str(len(blocks)))
-            print('cleared blocks: ' + str(cleared_blocks))
-            print('cleared rows: ' + str(int(cleared_blocks / grid_cols)))
 
     if not mondo_mode:
         clock.tick(frame_rate)
