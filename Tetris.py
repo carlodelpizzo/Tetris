@@ -708,14 +708,13 @@ def round_over():
 
     if num_active != 0:
         rounds_played += 1
-        print('')
         print('########################################################################################')
         print('')
-        print('cleared rows: ' + str(num_clear) + ', uncleared blocks: ' + str(num_active) + ', t: ' +
-              str(round_frame_count) + ', Gt: ' + str(global_frame_count) + ', Rounds: ' + str(rounds_played))
+        print('cleared rows: ' + str(num_clear) + ', active blocks: ' + str(num_active) +
+              ', round frames: ' + str(round_frame_count) + ', global frames: ' + str(global_frame_count) +
+              ', round: ' + str(rounds_played))
         print('')
         print('########################################################################################')
-        print('')
     round_frame_count = 0
     spawn_random_tet(True)
 
