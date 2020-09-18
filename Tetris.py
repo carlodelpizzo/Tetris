@@ -44,7 +44,7 @@ class GameGrid:
         self.bottom = self.y + self.height
 
     def move_pos(self, x_offset, y_offset):
-        global  falling_tet
+        global falling_tet
 
         self.x += x_offset
         self.y += y_offset
