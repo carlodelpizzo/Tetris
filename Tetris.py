@@ -72,6 +72,7 @@ class Block:
         self.drop = 0
         self.type = tet_type
         self.grid_pos = [0, 0]
+        self.shadow = False
 
     def draw(self):
         accent0 = [self.color[0] * 0.2, self.color[1] * 0.2, self.color[2] * 0.2]
@@ -82,7 +83,13 @@ class Block:
         pygame.draw.rect(screen, accent1, (self.x + 1, self.y + 1, self.width - 2, self.height - 2))
         pygame.draw.rect(screen, accent2, (self.x + 3, self.y + 3, self.width - 6, self.height - 6))
         pygame.draw.rect(screen, accent3, (self.x + 4, self.y + 4, self.width - 8, self.height - 8))
-        pygame.draw.rect(screen, self.color, (self.x + 5, self.y + 5, self.width - 10, self.height - 10))
+        if not self.shadow:
+            pygame.draw.rect(screen, self.color, (self.x + 5, self.y + 5, self.width - 10, self.height - 10))
+        else:
+            pygame.draw.rect(screen, accent2, (self.x + 5, self.y + 5, self.width - 10, self.height - 10))
+            pygame.draw.rect(screen, accent1, (self.x + 6, self.y + 6, self.width - 12, self.height - 12))
+            pygame.draw.rect(screen, accent0, (self.x + 8, self.y + 8, self.width - 16, self.height - 16))
+            pygame.draw.rect(screen, black, (self.x + 9, self.y + 9, self.width - 18, self.height - 18))
 
     def lock(self):
         if not self.locked:
@@ -135,33 +142,55 @@ class Tet:
 
     def move_x(self, x_offset):
         edge = False
-        for i in range(len(self.body)):
-            if self.body[i].x + x_offset >= grid.right_edge or \
-                    self.body[i].x + x_offset < grid.x:
+        for blk in self.body:
+            if blk.x + x_offset >= grid.right_edge or \
+                    blk.x + x_offset < grid.x:
                 edge = True
                 break
         if self.collide_block(x_mod=x_offset):
             edge = True
         if not edge:
-            for i in range(len(self.body)):
-                self.body[i].x += x_offset
+            for blk in self.body:
+                blk.x += x_offset
             self.x += x_offset
 
     def move_y(self, y_offset):
         if not self.collide_y(y_offset):
-            for i in range(len(self.body)):
-                self.body[i].y += y_offset
+            for blk in self.body:
+                blk.y += y_offset
             self.y += y_offset
+
+    def update_pos(self, new_x=None, new_y=None):
+        if new_x is None:
+            new_x = self.x
+        if new_y is None:
+            new_y = self.y
+
+        for blk in self.body:
+            blk.x = new_x + (blk.x - self.x)
+            blk.y = new_y + (blk.y - self.y)
+
+        self.x = new_x
+        self.y = new_y
+
+    def shadow_drop(self):
+        if self.collide_y(grid.y_unit):
+            return
+        else:
+            self.y += grid.y_unit
+            for blk in self.body:
+                blk.y += grid.y_unit
+            self.shadow_drop()
 
     def collide_y(self, y_offset):
         collide = False
-        for i in range(len(self.body)):
-            if self.body[i].y + y_offset >= grid.bottom:
+        for self_blk in self.body:
+            if self_blk.y + y_offset >= grid.bottom:
                 collide = True
                 break
-            for bi in range(len(blocks)):
-                if self.body[i].y + y_offset == blocks[bi].y and \
-                        self.body[i].x == blocks[bi].x:
+            for blk in blocks:
+                if self_blk.y + y_offset == blk.y and \
+                        self_blk.x == blk.x:
                     collide = True
                     break
         if collide:
@@ -170,39 +199,39 @@ class Tet:
             return False
 
     def collide_block(self, x_mod=0, y_mod=0):
-        for i in range(len(self.body)):
+        for self_blk in self.body:
             for blk in blocks:
-                if self.body[i].x + x_mod == blk.x and \
-                        self.body[i].y + y_mod == blk.y:
+                if self_blk.x + x_mod == blk.x and \
+                        self_blk.y + y_mod == blk.y:
                     return True
 
     def correct_off_screen_x(self):
         off_screen = None
-        for i in range(len(self.body)):
-            if self.body[i].x >= grid.right_edge:
+        for blk in self.body:
+            if blk.x >= grid.right_edge:
                 off_screen = 'right'
                 break
-            elif self.body[i].x < grid.x:
+            elif blk.x < grid.x:
                 off_screen = 'left'
                 break
         if off_screen == 'right':
-            for i in range(len(self.body)):
-                self.body[i].x -= grid.x_unit
+            for blk in self.body:
+                blk.x -= grid.x_unit
             self.correct_off_screen_x()
         elif off_screen == 'left':
-            for i in range(len(self.body)):
-                self.body[i].x += grid.x_unit
+            for blk in self.body:
+                blk.x += grid.x_unit
             self.correct_off_screen_x()
 
     def correct_off_screen_y(self):
         off_screen = False
-        for i in range(len(self.body)):
-            if self.body[i].y >= grid.right_edge:
+        for blk in self.body:
+            if blk.y >= grid.bottom:
                 off_screen = True
                 break
         if off_screen:
-            for i in range(len(self.body)):
-                self.body[i].y -= grid.y_unit
+            for blk in self.body:
+                blk.y -= grid.y_unit
             self.correct_off_screen_y()
 
     def lock_blocks(self):
@@ -220,8 +249,15 @@ class Tet:
             new_color = self.color
         else:
             self.color = new_color
-        for i in range(len(self.body)):
-            self.body[i].change_color(new_color)
+
+        for blk in self.body:
+            blk.change_color(new_color)
+
+    def shadow_blocks(self):
+        self.color = [self.color[0] / 2, self.color[1] / 2, self.color[2] / 2]
+        self.change_block_colors()
+        for blk in self.body:
+            blk.shadow = True
 
 
 class TBlock(Tet):
@@ -232,8 +268,8 @@ class TBlock(Tet):
         self.body.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, self.type))
         self.body.append(Block(self.x + grid.x_unit * 2, self.y + grid.y_unit, self.type))
 
-    def rotate(self, ccw=True):
-        if ccw:
+    def rotate(self, cw=False):
+        if cw:
             if self.rotation == 0:
                 self.body[0].x -= grid.x_unit
                 self.body[0].y += grid.y_unit
@@ -293,7 +329,7 @@ class TBlock(Tet):
                 self.rotation = 3
 
         if self.collide_block() and self.y > 0:
-            self.rotate(not ccw)
+            self.rotate(not cw)
         self.correct_off_screen_x()
         self.correct_off_screen_y()
 
@@ -306,8 +342,8 @@ class JBlock(Tet):
         self.body.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, self.type))
         self.body.append(Block(self.x + grid.x_unit * 2, self.y + grid.y_unit, self.type))
 
-    def rotate(self, ccw=True):
-        if ccw:
+    def rotate(self, cw=False):
+        if cw:
             if self.rotation == 0:
                 self.body[0].y += grid.y_unit * 2
                 self.body[1].x += grid.x_unit
@@ -371,7 +407,7 @@ class JBlock(Tet):
                 self.rotation = 3
 
         if self.collide_block() and self.y > 0:
-            self.rotate(not ccw)
+            self.rotate(not cw)
         self.correct_off_screen_x()
         self.correct_off_screen_y()
 
@@ -384,8 +420,8 @@ class LBlock(Tet):
         self.body.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, self.type))
         self.body.append(Block(self.x + grid.x_unit * 2, self.y + grid.y_unit, self.type))
 
-    def rotate(self, ccw=True):
-        if ccw:
+    def rotate(self, cw=False):
+        if cw:
             if self.rotation == 0:
                 self.body[0].x -= grid.x_unit * 2
                 self.body[1].x += grid.x_unit
@@ -449,7 +485,7 @@ class LBlock(Tet):
                 self.rotation = 3
 
         if self.collide_block() and self.y > 0:
-            self.rotate(not ccw)
+            self.rotate(not cw)
         self.correct_off_screen_x()
         self.correct_off_screen_y()
 
@@ -462,8 +498,8 @@ class IBlock(Tet):
         self.body.append(Block(self.x + grid.x_unit * 2, self.y, self.type))
         self.body.append(Block(self.x + grid.x_unit * 3, self.y, self.type))
 
-    def rotate(self, ccw=None):
-        if ccw:
+    def rotate(self, cw=None):
+        if cw:
             pass
         if self.rotation == 0:
             self.body[1].x -= grid.x_unit
@@ -496,7 +532,7 @@ class OBlock(Tet):
         self.body.append(Block(self.x + grid.x_unit, self.y, self.type))
         self.body.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, self.type))
 
-    def rotate(self, ccw=None):
+    def rotate(self, cw=None):
         pass
 
 
@@ -508,8 +544,8 @@ class SBlock(Tet):
         self.body.append(Block(self.x + grid.x_unit, self.y, self.type))
         self.body.append(Block(self.x + grid.x_unit * 2, self.y, self.type))
 
-    def rotate(self, ccw=None):
-        if ccw:
+    def rotate(self, cw=None):
+        if cw:
             pass
         if self.rotation == 0:
             self.body[0].y += grid.y_unit
@@ -540,9 +576,11 @@ class ZBlock(Tet):
         self.body.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, self.type))
         self.body.append(Block(self.x + grid.x_unit * 2, self.y + grid.y_unit, self.type))
 
-    def rotate(self, ccw=None):
-        if ccw:
+    def rotate(self, cw=None):
+        # only here to avoid pycharm warning
+        if cw:
             pass
+
         if self.rotation == 0:
             self.body[0].y += grid.y_unit
             self.body[0].x += grid.x_unit
@@ -598,7 +636,7 @@ def lock_tet():
             spawn_random_tet()
 
 
-def move_tet():
+def player_move_tet():
     global falling_tet
 
     if falling_tet is not None:
@@ -706,12 +744,28 @@ def mouse_click():
 def shadow_tet():
     global shadow
 
+    # Create or destroy shadow
     if shadow is None and falling_tet is not None:
-        shadow = tet_array[tet_array_str.index(falling_tet.type)](0, 0)
-        shadow.color = [falling_tet.color[0] / 2, falling_tet.color[1] / 2, falling_tet.color[2] / 2]
-        shadow.change_block_colors()
+        shadow = tet_array[tet_array_str.index(falling_tet.type)](falling_tet.x, falling_tet.y)
+        shadow.shadow_blocks()
     elif shadow is not None and (falling_tet is None or falling_tet.type != shadow.type):
         shadow = None
+
+    # Cast shadow from falling tet
+    if shadow is not None and falling_tet is not None:
+        # Reset shadow pos
+        shadow.update_pos(falling_tet.x, falling_tet.y)
+
+        # Match rotation
+        if shadow.rotation != falling_tet.rotation:
+            shadow.rotate()
+            if shadow.rotation != falling_tet.rotation:
+                shadow.rotate(True)
+                shadow.rotate(True)
+
+        shadow.shadow_drop()
+        for blk in shadow.body:
+            blk.draw()
 
 
 # Game grid
@@ -805,21 +859,21 @@ while running:
                 if falling_tet is None:
                     falling_tet = TBlock((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2)
             # Rotate falling block
-            if keys[K_e]:
+            if keys[K_r]:
                 if falling_tet is not None:
                     falling_tet.rotate()
-            elif keys[K_r]:
+            elif keys[K_e]:
                 if falling_tet is not None:
-                    falling_tet.rotate(False)
+                    falling_tet.rotate(True)
             # Move falling block right
             if keys[K_RIGHT] and not move_right:
                 move_right = True
-                move_tet()
+                player_move_tet()
                 move_delay_timer = hold_delay
             # Move falling block left
             if keys[K_LEFT] and not move_left:
                 move_left = True
-                move_tet()
+                player_move_tet()
                 move_delay_timer = hold_delay
             # Turn on quick drop
             if keys[K_DOWN] and not quick_drop:
@@ -870,7 +924,7 @@ while running:
         mouse_click()
 
     # Block updates
-    # shadow_tet()
+    shadow_tet()
     spawn_random_tet()
     if not paused:
         if fall_cool_down_timer == 0 or quick_drop:
@@ -882,7 +936,7 @@ while running:
             fall_cool_down_timer -= 1
         lock_tet()
         if move_delay_timer == 0:
-            move_tet()
+            player_move_tet()
         elif move_delay_timer > 0:
             move_delay_timer -= 1
         if spawn_timer > 1:
