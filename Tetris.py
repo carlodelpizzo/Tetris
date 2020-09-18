@@ -155,7 +155,6 @@ class Tet:
         self.x = int(x)
         self.y = int(y)
         self.rotation = 0
-        self.offsets = {}
         self.body = []
         self.locked = False
         self.death_timer = -1
@@ -163,8 +162,8 @@ class Tet:
         self.color = tet_color
         if kind in tet_offsets:
             for i in range(len(tet_offsets[kind][0])):
-                x_offset = grid.x_unit * tet_offsets[kind][self.rotation][i][0]
-                y_offset = grid.x_unit * tet_offsets[kind][self.rotation][i][1]
+                x_offset = grid.x_unit * tet_offsets[kind][0][i][0]
+                y_offset = grid.y_unit * tet_offsets[kind][0][i][1]
                 self.body.append(Block(self.x + x_offset, self.y + y_offset, self.type))
 
     def move_x(self, x_offset):
@@ -298,7 +297,7 @@ class Tet:
                 self.rotation += 1
         for i in range(len(tet_offsets[self.type])):
             x_offset = grid.x_unit * tet_offsets[self.type][self.rotation][i][0]
-            y_offset = grid.x_unit * tet_offsets[self.type][self.rotation][i][1]
+            y_offset = grid.y_unit * tet_offsets[self.type][self.rotation][i][1]
             self.body[i].x = self.x + x_offset
             self.body[i].y = self.y + y_offset
         if self.collide_block():
@@ -438,7 +437,6 @@ def shadow_tet():
 
     # Create or destroy shadow
     if falling_tet_shadow is None and falling_tet is not None:
-        # falling_tet_shadow = tet_array[tet_array_str.index(falling_tet.type)](falling_tet.x, falling_tet.y)
         falling_tet_shadow = Tet(falling_tet.x, falling_tet.y, falling_tet.type)
         falling_tet_shadow.shadow_blocks()
     elif falling_tet_shadow is not None and (falling_tet is None or falling_tet.type != falling_tet_shadow.type):
@@ -486,7 +484,7 @@ for r in range(1, grid_rows + 1):
 tet_color_dict = {'TBlock': purple, 'JBlock': blue, 'LBlock': orange, 'IBlock': cyan, 'OBlock': yellow,
                   'SBlock': green, 'ZBlock': red}
 tet_offsets = {
-    'TBlock': [[[0, 1], [1, 1], [2, 1], [1, 2]],
+    'TBlock': [[(0, 1), (1, 1), (2, 1), (1, 2)],
                [(1, 0), (1, 1), (1, 2), (0, 1)],
                [(2, 2), (1, 2), (0, 2), (1, 1)],
                [(1, 2), (1, 1), (1, 0), (2, 1)]],
