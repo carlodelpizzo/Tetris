@@ -683,14 +683,14 @@ while running:
         grid.draw()
 
     # Draw blocks
-    for block in blocks:
-        block.draw()
-        block.drop_row()
     if falling_tet_shadow is not None:
         # noinspection PyUnresolvedReferences
         falling_tet_shadow.draw()
     if falling_tet is not None:
         falling_tet.draw()
+    for block in blocks:
+        block.draw()
+        block.drop_row()
 
     if not paused:
         round_frame_timer += 1
