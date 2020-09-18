@@ -62,18 +62,15 @@ class GameGrid:
 
 
 class Block:
-    def __init__(self, x, y, tet_type='', block_color=None):
-        if block_color is None:
-            block_color = white
+    def __init__(self, x, y, tet_type=''):
         self.x = int(x)
         self.y = int(y)
         self.width = grid.x_unit
         self.height = grid.y_unit
         self.locked = False
-        self.color = block_color
+        self.color = white
         self.drop = 0
         self.type = tet_type
-        self.pos = [0, 0]
 
     def draw(self):
         accent0 = [self.color[0] * 0.2, self.color[1] * 0.2, self.color[2] * 0.2]
@@ -96,14 +93,12 @@ class Block:
                 for blk in blocks:
                     if blk is self:
                         continue
-                    if blk.pos == self.pos:
+                    if blk.x == self.x and blk.y == self.y:
                         return
-                self.pos = [row_pos, col_pos]
 
     def unlock(self):
         if self.locked:
             self.locked = False
-            self.pos = [0, 0]
 
     def clear(self):
         global cleared_blocks_count
@@ -124,8 +119,10 @@ class Block:
 
 
 class Tet:
-    def __init__(self, x, y, kind, tet_color=None):
-        if tet_color is None:
+    def __init__(self, x, y, kind):
+        if kind in tet_color_dict:
+            tet_color = tet_color_dict[kind]
+        else:
             tet_color = white
         self.x = int(x)
         self.y = int(y)
@@ -175,7 +172,8 @@ class Tet:
     def collide_block(self, x_mod=0, y_mod=0):
         for i in range(len(self.body)):
             for blk in blocks:
-                if falling_blocks[self.body[i]].x + x_mod == blk.x and falling_blocks[self.body[i]].y + y_mod == blk.y:
+                if falling_blocks[self.body[i]].x + x_mod == blk.x and \
+                        falling_blocks[self.body[i]].y + y_mod == blk.y:
                     return True
 
     def correct_off_screen_x(self):
@@ -207,9 +205,7 @@ class Tet:
                 falling_blocks[self.body[i]].y -= grid.y_unit
             self.correct_off_screen_y()
 
-    def commit_self_die(self):
-        global falling_tet
-
+    def lock_blocks(self):
         if self.locked and self.influence == 0 and self.y >= grid.y:
             for i in range(len(self.body)):
                 blocks.append(falling_blocks[self.body[i]])
@@ -217,9 +213,16 @@ class Tet:
             self.body.sort(reverse=True)
             for i in range(len(self.body)):
                 falling_blocks.pop(self.body[i])
-            falling_tet = None
         elif self.locked and self.influence == 0 and self.y < grid.y:
             round_over()
+
+    def change_block_colors(self, new_color=None):
+        if new_color is None:
+            new_color = self.color
+        else:
+            self.color = new_color
+        for i in range(len(self.body)):
+            falling_blocks[self.body[i]].change_color(new_color)
 
 
 class TBlock(Tet):
@@ -619,7 +622,8 @@ def lock_tet():
             falling_tet.locked = False
             falling_tet.influence = -1
         elif falling_tet.influence == 0 and falling_tet.collide_y(grid.y_unit):
-            falling_tet.commit_self_die()
+            falling_tet.lock_blocks()
+            falling_tet = None
             spawn_random_tet()
 
 
@@ -646,8 +650,8 @@ def clear_blocks():
     temp_array = []
     temp_block_array = []
     for blk in blocks:
-        if blk.locked and blk.pos[0] != 0:
-            temp_array.append(blk.pos[0])
+        if blk.locked and blk.x != 0:
+            temp_array.append(blk.x)
             temp_block_array.append(blk)
     # strings = []
     for i in range(1, grid.rows + 1):
@@ -665,8 +669,6 @@ def spawn_random_tet(ran_pos=False):
     global last_spawned_tet
 
     if falling_tet is None and allow_spawn:
-        tet_array = [TBlock, JBlock, LBlock, IBlock, OBlock, SBlock, ZBlock]
-        tet_array_str = ['TBlock', 'JBlock', 'LBlock', 'IBlock', 'OBlock', 'SBlock', 'ZBlock']
         i = random.randint(0, len(tet_array) - 1)
         # Prevent same block 3 times in a row
         if tet_array_str[i] == last_spawned_tet[0] and tet_array_str[i] == last_spawned_tet[1]:
@@ -733,9 +735,14 @@ def mouse_click():
 
 
 def shadow_tet():
-    tet_array = [TBlock, JBlock, LBlock, IBlock, OBlock, SBlock, ZBlock]
-    tet_array_str = ['TBlock', 'JBlock', 'LBlock', 'IBlock', 'OBlock', 'SBlock', 'ZBlock']
-    shadow = tet_array[tet_array_str.index(falling_tet.type)](0, 0)
+    global shadow
+
+    if shadow is None and falling_tet is not None:
+        shadow = tet_array[tet_array_str.index(falling_tet.type)](0, 0)
+        shadow.color = [falling_tet.color[0] / 2, falling_tet.color[1] / 2, falling_tet.color[2] / 2]
+        shadow.change_block_colors()
+    elif shadow is not None and (falling_tet is None or falling_tet.type != shadow.type):
+        shadow = None
 
 
 # Game grid
@@ -751,12 +758,15 @@ lock_delay = frame_rate / 2
 hold_delay = frame_rate / 5
 
 # Game data
+shadow = None
 blocks = []
 falling_blocks = []
 last_spawned_tet = ['', '']
 falling_tet = None
 tet_color_dict = {'TBlock': purple, 'JBlock': blue, 'LBlock': orange, 'IBlock': cyan, 'OBlock': yellow,
                   'SBlock': green, 'ZBlock': red}
+tet_array = [TBlock, JBlock, LBlock, IBlock, OBlock, SBlock, ZBlock]
+tet_array_str = ['TBlock', 'JBlock', 'LBlock', 'IBlock', 'OBlock', 'SBlock', 'ZBlock']
 
 # Control variables
 quick_drop = False
@@ -892,6 +902,7 @@ while running:
         mouse_click()
 
     # Block updates
+    shadow_tet()
     spawn_random_tet()
     if not paused:
         if fall_cool_down_timer == 0 or quick_drop:
