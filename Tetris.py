@@ -32,14 +32,14 @@ main_font = pygame.font.SysFont(font_face, font_size)
 
 class GameGrid:
     def __init__(self, x, y, width, height, rows, cols=10):
-        self.x = x
-        self.y = y
-        self.rows = rows
-        self.cols = cols
+        self.x = int(x)
+        self.y = int(y)
+        self.rows = int(rows)
+        self.cols = int(cols)
         self.x_unit = int(width / cols)
         self.y_unit = int(height / rows)
-        self.width = self.x_unit * cols
-        self.height = self.y_unit * rows
+        self.width = self.x_unit * self.cols
+        self.height = self.y_unit * self.rows
         self.right_edge = self.x + self.width
         self.bottom = self.y + self.height
 
@@ -62,13 +62,15 @@ class GameGrid:
 
 
 class Block:
-    def __init__(self, x, y, tet_type=''):
-        self.x = x
-        self.y = y
+    def __init__(self, x, y, tet_type='', block_color=None):
+        if block_color is None:
+            block_color = white
+        self.x = int(x)
+        self.y = int(y)
         self.width = grid.x_unit
         self.height = grid.y_unit
         self.locked = False
-        self.color = white
+        self.color = block_color
         self.drop = 0
         self.type = tet_type
         self.pos = [0, 0]
@@ -111,33 +113,28 @@ class Block:
         cleared_blocks_count += 1
         blocks.pop(blocks.index(self))
 
-    def change_color(self):
-        if self.type == '':
-            self.color = pink
-        elif self.type == 'TBlock':
-            self.color = purple
-        elif self.type == 'JBlock':
-            self.color = blue
-        elif self.type == 'LBlock':
-            self.color = orange
-        elif self.type == 'IBlock':
-            self.color = cyan
-        elif self.type == 'OBlock':
-            self.color = yellow
-        elif self.type == 'SBlock':
-            self.color = green
-        elif self.type == 'ZBlock':
-            self.color = red
+    def change_color(self, change=None):
+        if change is None:
+            if self.type in tet_color_dict:
+                self.color = tet_color_dict[self.type]
+            else:
+                self.color = pink
+        else:
+            self.color = change
 
 
 class Tet:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
+    def __init__(self, x, y, kind, tet_color=None):
+        if tet_color is None:
+            tet_color = white
+        self.x = int(x)
+        self.y = int(y)
         self.rotation = 0
         self.body = []
         self.locked = False
         self.influence = -1
+        self.type = kind
+        self.color = tet_color
 
     def move_x(self, x_offset):
         edge = False
@@ -227,15 +224,15 @@ class Tet:
 
 class TBlock(Tet):
     def __init__(self, x, y):
-        super().__init__(x, y)
+        super().__init__(x, y, 'TBlock')
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit, self.y, 'TBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit, self.y, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x, self.y + grid.y_unit, 'TBlock'))
+        falling_blocks.append(Block(self.x, self.y + grid.y_unit, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, 'TBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit * 2, self.y + grid.y_unit, 'TBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit * 2, self.y + grid.y_unit, self.type))
 
     def rotate(self, ccw=True):
         if ccw:
@@ -305,15 +302,15 @@ class TBlock(Tet):
 
 class JBlock(Tet):
     def __init__(self, x, y):
-        super().__init__(x, y)
+        super().__init__(x, y, 'JBlock')
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x, self.y, 'JBlock'))
+        falling_blocks.append(Block(self.x, self.y, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x, self.y + grid.y_unit, 'JBlock'))
+        falling_blocks.append(Block(self.x, self.y + grid.y_unit, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, 'JBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit * 2, self.y + grid.y_unit, 'JBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit * 2, self.y + grid.y_unit, self.type))
 
     def rotate(self, ccw=True):
         if ccw:
@@ -387,15 +384,15 @@ class JBlock(Tet):
 
 class LBlock(Tet):
     def __init__(self, x, y):
-        super().__init__(x, y)
+        super().__init__(x, y, 'LBlock')
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit * 2, self.y, 'LBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit * 2, self.y, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x, self.y + grid.y_unit, 'LBlock'))
+        falling_blocks.append(Block(self.x, self.y + grid.y_unit, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, 'LBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit * 2, self.y + grid.y_unit, 'LBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit * 2, self.y + grid.y_unit, self.type))
 
     def rotate(self, ccw=True):
         if ccw:
@@ -469,15 +466,15 @@ class LBlock(Tet):
 
 class IBlock(Tet):
     def __init__(self, x, y):
-        super().__init__(x, y)
+        super().__init__(x, y, 'IBlock')
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x, self.y, 'IBlock'))
+        falling_blocks.append(Block(self.x, self.y, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit, self.y, 'IBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit, self.y, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit * 2, self.y, 'IBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit * 2, self.y, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit * 3, self.y, 'IBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit * 3, self.y, self.type))
 
     def rotate(self, ccw=None):
         if ccw:
@@ -507,15 +504,15 @@ class IBlock(Tet):
 
 class OBlock(Tet):
     def __init__(self, x, y):
-        super().__init__(x, y)
+        super().__init__(x, y, 'OBlock')
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x, self.y, 'OBlock'))
+        falling_blocks.append(Block(self.x, self.y, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x, self.y + grid.y_unit, 'OBlock'))
+        falling_blocks.append(Block(self.x, self.y + grid.y_unit, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit, self.y, 'OBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit, self.y, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, 'OBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, self.type))
 
     def rotate(self, ccw=None):
         pass
@@ -523,15 +520,15 @@ class OBlock(Tet):
 
 class SBlock(Tet):
     def __init__(self, x, y):
-        super().__init__(x, y)
+        super().__init__(x, y, 'SBlock')
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x, self.y + grid.y_unit, 'SBlock'))
+        falling_blocks.append(Block(self.x, self.y + grid.y_unit, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, 'SBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit, self.y, 'SBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit, self.y, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit * 2, self.y, 'SBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit * 2, self.y, self.type))
 
     def rotate(self, ccw=None):
         if ccw:
@@ -559,15 +556,15 @@ class SBlock(Tet):
 
 class ZBlock(Tet):
     def __init__(self, x, y):
-        super().__init__(x, y)
+        super().__init__(x, y, 'ZBlock')
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x, self.y, 'ZBlock'))
+        falling_blocks.append(Block(self.x, self.y, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit, self.y, 'ZBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit, self.y, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, 'ZBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, self.type))
         self.body.append(len(falling_blocks))
-        falling_blocks.append(Block(self.x + grid.x_unit * 2, self.y + grid.y_unit, 'ZBlock'))
+        falling_blocks.append(Block(self.x + grid.x_unit * 2, self.y + grid.y_unit, self.type))
 
     def rotate(self, ccw=None):
         if ccw:
@@ -735,6 +732,12 @@ def mouse_click():
     grid.move_pos(mouse_pos[0] - grid.x, mouse_pos[1] - grid.y)
 
 
+def shadow_tet():
+    tet_array = [TBlock, JBlock, LBlock, IBlock, OBlock, SBlock, ZBlock]
+    tet_array_str = ['TBlock', 'JBlock', 'LBlock', 'IBlock', 'OBlock', 'SBlock', 'ZBlock']
+    shadow = tet_array[tet_array_str.index(falling_tet.type)](0, 0)
+
+
 # Game grid
 grid_rows = 15
 grid_cols = 10
@@ -752,6 +755,8 @@ blocks = []
 falling_blocks = []
 last_spawned_tet = ['', '']
 falling_tet = None
+tet_color_dict = {'TBlock': purple, 'JBlock': blue, 'LBlock': orange, 'IBlock': cyan, 'OBlock': yellow,
+                  'SBlock': green, 'ZBlock': red}
 
 # Control variables
 quick_drop = False
@@ -822,10 +827,10 @@ while running:
                 if falling_tet is None:
                     falling_tet = TBlock((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2)
             # Rotate falling block
-            if keys[K_r]:
+            if keys[K_e]:
                 if falling_tet is not None:
                     falling_tet.rotate()
-            elif keys[K_e]:
+            elif keys[K_r]:
                 if falling_tet is not None:
                     falling_tet.rotate(False)
             # Move falling block right
