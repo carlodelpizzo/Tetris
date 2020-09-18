@@ -155,11 +155,17 @@ class Tet:
         self.x = int(x)
         self.y = int(y)
         self.rotation = 0
+        self.offsets = {}
         self.body = []
         self.locked = False
         self.death_timer = -1
         self.type = kind
         self.color = tet_color
+        if kind in tet_offsets:
+            for i in range(len(tet_offsets[kind][0])):
+                x_offset = grid.x_unit * tet_offsets[kind][self.rotation][i][0]
+                y_offset = grid.x_unit * tet_offsets[kind][self.rotation][i][1]
+                self.body.append(Block(self.x + x_offset, self.y + y_offset, self.type))
 
     def move_x(self, x_offset):
         edge = False
@@ -279,343 +285,24 @@ class Tet:
         for blk in self.body:
             blk.shadow = True
 
-
-class TBlock(Tet):
-    def __init__(self, x, y):
-        super().__init__(x, y, 'TBlock')
-        self.body.append(Block(self.x + grid.x_unit, self.y, self.type))
-        self.body.append(Block(self.x, self.y + grid.y_unit, self.type))
-        self.body.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, self.type))
-        self.body.append(Block(self.x + grid.x_unit * 2, self.y + grid.y_unit, self.type))
-
-    def rotate(self, cw=False):
-        if cw:
-            if self.rotation == 0:
-                self.body[0].x -= grid.x_unit
-                self.body[0].y += grid.y_unit
-                self.body[1].x += grid.x_unit
-                self.body[1].y += grid.y_unit
-                self.body[3].x -= grid.x_unit
-                self.body[3].y -= grid.y_unit
-                self.rotation += 1
-            elif self.rotation == 1:
-                self.body[0].x += grid.x_unit
-                self.body[1].x += grid.x_unit
-                self.body[1].y -= grid.y_unit * 2
-                self.body[2].y -= grid.y_unit
-                self.body[3].x -= grid.x_unit
-                self.rotation += 1
-            elif self.rotation == 2:
-                self.body[1].x -= grid.x_unit * 2
-                self.body[2].x -= grid.x_unit
-                self.body[2].y += grid.y_unit
-                self.body[3].y += grid.y_unit * 2
-                self.rotation += 1
-            elif self.rotation == 3:
-                self.body[0].y -= grid.y_unit
-                self.body[1].y += grid.y_unit
-                self.body[2].x += grid.x_unit
-                self.body[3].x += grid.x_unit * 2
-                self.body[3].y -= grid.y_unit
-                self.rotation = 0
+    def rotate(self, reverse=False):
+        if reverse:
+            if self.rotation - 1 < 0:
+                self.rotation = len(tet_offsets[self.type]) - 1
+            else:
+                self.rotation -= 1
         else:
-            if self.rotation == 1:
-                self.body[0].x += grid.x_unit
-                self.body[0].y -= grid.y_unit
-                self.body[1].x -= grid.x_unit
-                self.body[1].y -= grid.y_unit
-                self.body[3].x += grid.x_unit
-                self.body[3].y += grid.y_unit
-                self.rotation -= 1
-            elif self.rotation == 2:
-                self.body[0].x -= grid.x_unit
-                self.body[1].x -= grid.x_unit
-                self.body[1].y += grid.y_unit * 2
-                self.body[2].y += grid.y_unit
-                self.body[3].x += grid.x_unit
-                self.rotation -= 1
-            elif self.rotation == 3:
-                self.body[1].x += grid.x_unit * 2
-                self.body[2].x += grid.x_unit
-                self.body[2].y -= grid.y_unit
-                self.body[3].y -= grid.y_unit * 2
-                self.rotation -= 1
-            elif self.rotation == 0:
-                self.body[0].y += grid.y_unit
-                self.body[1].y -= grid.y_unit
-                self.body[2].x -= grid.x_unit
-                self.body[3].x -= grid.x_unit * 2
-                self.body[3].y += grid.y_unit
-                self.rotation = 3
-
-        if self.collide_block() and self.y > 0:
-            self.rotate(not cw)
-        self.correct_off_screen_x()
-        self.correct_off_screen_y()
-
-
-class JBlock(Tet):
-    def __init__(self, x, y):
-        super().__init__(x, y, 'JBlock')
-        self.body.append(Block(self.x, self.y, self.type))
-        self.body.append(Block(self.x, self.y + grid.y_unit, self.type))
-        self.body.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, self.type))
-        self.body.append(Block(self.x + grid.x_unit * 2, self.y + grid.y_unit, self.type))
-
-    def rotate(self, cw=False):
-        if cw:
-            if self.rotation == 0:
-                self.body[0].y += grid.y_unit * 2
-                self.body[1].x += grid.x_unit
-                self.body[1].y += grid.y_unit
-                self.body[3].x -= grid.x_unit
-                self.body[3].y -= grid.y_unit
-                self.rotation += 1
-            elif self.rotation == 1:
-                self.body[0].x += grid.x_unit * 2
-                self.body[0].y -= grid.y_unit
-                self.body[1].x += grid.x_unit
-                self.body[1].y -= grid.y_unit * 2
-                self.body[2].y -= grid.y_unit
-                self.body[3].x -= grid.x_unit
-                self.rotation += 1
-            elif self.rotation == 2:
-                self.body[0].x -= grid.x_unit
-                self.body[0].y -= grid.y_unit
-                self.body[1].x -= grid.x_unit * 2
-                self.body[2].x -= grid.x_unit
-                self.body[2].y += grid.y_unit
-                self.body[3].y += grid.y_unit * 2
-                self.rotation += 1
-            elif self.rotation == 3:
-                self.body[0].x -= grid.x_unit
-                self.body[1].y += grid.y_unit
-                self.body[2].x += grid.x_unit
-                self.body[3].x += grid.x_unit * 2
-                self.body[3].y -= grid.y_unit
+            if self.rotation + 1 > len(tet_offsets[self.type]) - 1:
                 self.rotation = 0
-        else:
-            if self.rotation == 1:
-                self.body[0].y -= grid.y_unit * 2
-                self.body[1].x -= grid.x_unit
-                self.body[1].y -= grid.y_unit
-                self.body[3].x += grid.x_unit
-                self.body[3].y += grid.y_unit
-                self.rotation -= 1
-            elif self.rotation == 2:
-                self.body[0].x -= grid.x_unit * 2
-                self.body[0].y += grid.y_unit
-                self.body[1].x -= grid.x_unit
-                self.body[1].y += grid.y_unit * 2
-                self.body[2].y += grid.y_unit
-                self.body[3].x += grid.x_unit
-                self.rotation -= 1
-            elif self.rotation == 3:
-                self.body[0].x += grid.x_unit
-                self.body[0].y += grid.y_unit
-                self.body[1].x += grid.x_unit * 2
-                self.body[2].x += grid.x_unit
-                self.body[2].y -= grid.y_unit
-                self.body[3].y -= grid.y_unit * 2
-                self.rotation -= 1
-            elif self.rotation == 0:
-                self.body[0].x += grid.x_unit
-                self.body[1].y -= grid.y_unit
-                self.body[2].x -= grid.x_unit
-                self.body[3].x -= grid.x_unit * 2
-                self.body[3].y += grid.y_unit
-                self.rotation = 3
-
-        if self.collide_block() and self.y > 0:
-            self.rotate(not cw)
-        self.correct_off_screen_x()
-        self.correct_off_screen_y()
-
-
-class LBlock(Tet):
-    def __init__(self, x, y):
-        super().__init__(x, y, 'LBlock')
-        self.body.append(Block(self.x + grid.x_unit * 2, self.y, self.type))
-        self.body.append(Block(self.x, self.y + grid.y_unit, self.type))
-        self.body.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, self.type))
-        self.body.append(Block(self.x + grid.x_unit * 2, self.y + grid.y_unit, self.type))
-
-    def rotate(self, cw=False):
-        if cw:
-            if self.rotation == 0:
-                self.body[0].x -= grid.x_unit * 2
-                self.body[1].x += grid.x_unit
-                self.body[1].y += grid.y_unit
-                self.body[3].x -= grid.x_unit
-                self.body[3].y -= grid.y_unit
+            else:
                 self.rotation += 1
-            elif self.rotation == 1:
-                self.body[0].y += grid.y_unit
-                self.body[1].x += grid.x_unit
-                self.body[1].y -= grid.y_unit * 2
-                self.body[2].y -= grid.y_unit
-                self.body[3].x -= grid.x_unit
-                self.rotation += 1
-            elif self.rotation == 2:
-                self.body[0].x += grid.x_unit
-                self.body[0].y += grid.y_unit
-                self.body[1].x -= grid.x_unit * 2
-                self.body[2].x -= grid.x_unit
-                self.body[2].y += grid.y_unit
-                self.body[3].y += grid.y_unit * 2
-                self.rotation += 1
-            elif self.rotation == 3:
-                self.body[0].x += grid.x_unit
-                self.body[0].y -= grid.y_unit * 2
-                self.body[1].y += grid.y_unit
-                self.body[2].x += grid.x_unit
-                self.body[3].x += grid.x_unit * 2
-                self.body[3].y -= grid.y_unit
-                self.rotation = 0
-        else:
-            if self.rotation == 1:
-                self.body[0].x += grid.x_unit * 2
-                self.body[1].x -= grid.x_unit
-                self.body[1].y -= grid.y_unit
-                self.body[3].x += grid.x_unit
-                self.body[3].y += grid.y_unit
-                self.rotation -= 1
-            elif self.rotation == 2:
-                self.body[0].y -= grid.y_unit
-                self.body[1].x -= grid.x_unit
-                self.body[1].y += grid.y_unit * 2
-                self.body[2].y += grid.y_unit
-                self.body[3].x += grid.x_unit
-                self.rotation -= 1
-            elif self.rotation == 3:
-                self.body[0].x -= grid.x_unit
-                self.body[0].y -= grid.y_unit
-                self.body[1].x += grid.x_unit * 2
-                self.body[2].x += grid.x_unit
-                self.body[2].y -= grid.y_unit
-                self.body[3].y -= grid.y_unit * 2
-                self.rotation -= 1
-            elif self.rotation == 0:
-                self.body[0].x -= grid.x_unit
-                self.body[0].y += grid.y_unit * 2
-                self.body[1].y -= grid.y_unit
-                self.body[2].x -= grid.x_unit
-                self.body[3].x -= grid.x_unit * 2
-                self.body[3].y += grid.y_unit
-                self.rotation = 3
-
-        if self.collide_block() and self.y > 0:
-            self.rotate(not cw)
-        self.correct_off_screen_x()
-        self.correct_off_screen_y()
-
-
-class IBlock(Tet):
-    def __init__(self, x, y):
-        super().__init__(x, y, 'IBlock')
-        self.body.append(Block(self.x, self.y, self.type))
-        self.body.append(Block(self.x + grid.x_unit, self.y, self.type))
-        self.body.append(Block(self.x + grid.x_unit * 2, self.y, self.type))
-        self.body.append(Block(self.x + grid.x_unit * 3, self.y, self.type))
-
-    def rotate(self, cw=None):
-        if cw:
-            pass
-        if self.rotation == 0:
-            self.body[1].x -= grid.x_unit
-            self.body[1].y += grid.y_unit
-            self.body[2].x -= grid.x_unit * 2
-            self.body[2].y += grid.y_unit * 2
-            self.body[3].x -= grid.x_unit * 3
-            self.body[3].y += grid.y_unit * 3
-            self.rotation += 1
-        elif self.rotation == 1:
-            self.body[1].x += grid.x_unit
-            self.body[1].y -= grid.y_unit
-            self.body[2].x += grid.x_unit * 2
-            self.body[2].y -= grid.y_unit * 2
-            self.body[3].x += grid.x_unit * 3
-            self.body[3].y -= grid.y_unit * 3
-            self.rotation = 0
-
-        if self.collide_block() and self.y > 0:
-            self.rotate()
-        self.correct_off_screen_x()
-        self.correct_off_screen_y()
-
-
-class OBlock(Tet):
-    def __init__(self, x, y):
-        super().__init__(x, y, 'OBlock')
-        self.body.append(Block(self.x, self.y, self.type))
-        self.body.append(Block(self.x, self.y + grid.y_unit, self.type))
-        self.body.append(Block(self.x + grid.x_unit, self.y, self.type))
-        self.body.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, self.type))
-
-    def rotate(self, cw=None):
-        pass
-
-
-class SBlock(Tet):
-    def __init__(self, x, y):
-        super().__init__(x, y, 'SBlock')
-        self.body.append(Block(self.x, self.y + grid.y_unit, self.type))
-        self.body.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, self.type))
-        self.body.append(Block(self.x + grid.x_unit, self.y, self.type))
-        self.body.append(Block(self.x + grid.x_unit * 2, self.y, self.type))
-
-    def rotate(self):
-        if self.rotation == 0:
-            self.body[0].y += grid.y_unit
-            self.body[0].x += grid.x_unit
-            self.body[2].x -= grid.x_unit
-            self.body[2].y += grid.y_unit
-            self.body[3].x -= grid.x_unit * 2
-            self.rotation += 1
-        elif self.rotation == 1:
-            self.body[0].y -= grid.y_unit
-            self.body[0].x -= grid.x_unit
-            self.body[2].x += grid.x_unit
-            self.body[2].y -= grid.y_unit
-            self.body[3].x += grid.x_unit * 2
-            self.rotation = 0
-
-        if self.collide_block() and self.y > 0:
-            self.rotate()
-        self.correct_off_screen_x()
-        self.correct_off_screen_y()
-
-
-class ZBlock(Tet):
-    def __init__(self, x, y):
-        super().__init__(x, y, 'ZBlock')
-        self.body.append(Block(self.x, self.y, self.type))
-        self.body.append(Block(self.x + grid.x_unit, self.y, self.type))
-        self.body.append(Block(self.x + grid.x_unit, self.y + grid.y_unit, self.type))
-        self.body.append(Block(self.x + grid.x_unit * 2, self.y + grid.y_unit, self.type))
-
-    def rotate(self, cw=None):
-        # only here to avoid pycharm warning
-        if cw:
-            pass
-
-        if self.rotation == 0:
-            self.body[0].y += grid.y_unit
-            self.body[0].x += grid.x_unit
-            self.body[2].x -= grid.x_unit
-            self.body[2].y += grid.y_unit
-            self.body[3].x -= grid.x_unit * 2
-            self.rotation += 1
-        elif self.rotation == 1:
-            self.body[0].y -= grid.y_unit
-            self.body[0].x -= grid.x_unit
-            self.body[2].x += grid.x_unit
-            self.body[2].y -= grid.y_unit
-            self.body[3].x += grid.x_unit * 2
-            self.rotation = 0
-
-        if self.collide_block() and self.y > 0:
-            self.rotate()
+        for i in range(len(tet_offsets[self.type])):
+            x_offset = grid.x_unit * tet_offsets[self.type][self.rotation][i][0]
+            y_offset = grid.x_unit * tet_offsets[self.type][self.rotation][i][1]
+            self.body[i].x = self.x + x_offset
+            self.body[i].y = self.y + y_offset
+        if self.collide_block():
+            self.rotate(not reverse)
         self.correct_off_screen_x()
         self.correct_off_screen_y()
 
@@ -684,29 +371,28 @@ def spawn_random_tet(ran_pos=False):
     global last_spawned_tet
 
     if falling_tet is None and allow_spawn:
-        i = random.randint(0, len(tet_array) - 1)
+        new_tet = random.choice(list(tet_offsets.keys()))
         # Prevent same block 3 times in a row
-        if tet_array_str[i] == last_spawned_tet[0] and tet_array_str[i] == last_spawned_tet[1]:
+        if new_tet == last_spawned_tet[0] and new_tet == last_spawned_tet[1]:
             spawn_random_tet()
             return
         # 2/3 chance to re-roll if same block as last
-        elif tet_array_str[i] == last_spawned_tet[1]:
+        elif new_tet == last_spawned_tet[1]:
             roll = random.randint(0, 2)
-            if roll > 0:
-                last_spawned_tet = [last_spawned_tet[1], tet_array_str[i]]
+            if roll != 0:
+                last_spawned_tet = [last_spawned_tet[1], new_tet]
                 spawn_random_tet()
                 return
         if ran_pos:
             ran_x = random.randint(grid.x, grid.x_unit * grid.cols)
         else:
             ran_x = (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2
-            if tet_array_str[i] == 'OBlock':
-                ran_x += grid.x_unit
+
         ran_x = int(ran_x - (ran_x % grid.x_unit))
 
-        falling_tet = tet_array[i](grid.x + ran_x, grid.y + -grid.y_unit * 2)
+        falling_tet = Tet(grid.x + ran_x, grid.y + -grid.y_unit * 2, new_tet)
 
-        last_spawned_tet = [last_spawned_tet[1], tet_array_str[i]]
+        last_spawned_tet = [last_spawned_tet[1], new_tet]
 
 
 def round_over():
@@ -752,7 +438,8 @@ def shadow_tet():
 
     # Create or destroy shadow
     if falling_tet_shadow is None and falling_tet is not None:
-        falling_tet_shadow = tet_array[tet_array_str.index(falling_tet.type)](falling_tet.x, falling_tet.y)
+        # falling_tet_shadow = tet_array[tet_array_str.index(falling_tet.type)](falling_tet.x, falling_tet.y)
+        falling_tet_shadow = Tet(falling_tet.x, falling_tet.y, falling_tet.type)
         falling_tet_shadow.shadow_blocks()
     elif falling_tet_shadow is not None and (falling_tet is None or falling_tet.type != falling_tet_shadow.type):
         falling_tet_shadow = None
@@ -798,8 +485,34 @@ for r in range(1, grid_rows + 1):
         row_state[r].append(None)
 tet_color_dict = {'TBlock': purple, 'JBlock': blue, 'LBlock': orange, 'IBlock': cyan, 'OBlock': yellow,
                   'SBlock': green, 'ZBlock': red}
-tet_array = [TBlock, JBlock, LBlock, IBlock, OBlock, SBlock, ZBlock]
-tet_array_str = ['TBlock', 'JBlock', 'LBlock', 'IBlock', 'OBlock', 'SBlock', 'ZBlock']
+tet_offsets = {
+    'TBlock': [[[0, 1], [1, 1], [2, 1], [1, 2]],
+               [(1, 0), (1, 1), (1, 2), (0, 1)],
+               [(2, 2), (1, 2), (0, 2), (1, 1)],
+               [(1, 2), (1, 1), (1, 0), (2, 1)]],
+    'JBlock': [[(0, 1), (1, 1), (2, 1), (2, 2)],
+               [(1, 0), (1, 1), (1, 2), (0, 2)],
+               [(2, 2), (1, 2), (0, 2), (0, 1)],
+               [(1, 2), (1, 1), (1, 0), (2, 0)]],
+    'LBlock': [[(0, 1), (1, 1), (2, 1), (0, 2)],
+               [(1, 0), (1, 1), (1, 2), (0, 0)],
+               [(2, 2), (1, 2), (0, 2), (2, 1)],
+               [(1, 2), (1, 1), (1, 0), (2, 2)]],
+    'IBlock': [[(0, 1), (1, 1), (2, 1), (3, 1)],
+               [(2, 0), (2, 1), (2, 2), (2, 3)],
+               [(0, 2), (1, 2), (2, 2), (3, 2)],
+               [(1, 0), (1, 1), (1, 2), (1, 3)]],
+    'SBlock': [[(1, 1), (2, 1), (0, 2), (1, 2)],
+               [(2, 1), (2, 2), (1, 0), (1, 1)],
+               [(1, 1), (0, 1), (2, 0), (1, 0)],
+               [(0, 1), (0, 0), (1, 2), (1, 1)]],
+    'ZBlock': [[(0, 1), (1, 1), (1, 2), (2, 2)],
+               [(2, 0), (2, 1), (1, 1), (1, 2)],
+               [(2, 1), (1, 1), (1, 0), (0, 0)],
+               [(0, 2), (0, 1), (1, 1), (1, 0)]],
+    'OBlock': [[(1, 0), (2, 0), (1, 1), (2, 1)]]
+}
+# tet_array_str = ['TBlock', 'JBlock', 'LBlock', 'IBlock', 'OBlock', 'SBlock', 'ZBlock']
 
 # Control variables
 quick_drop = False
@@ -843,31 +556,31 @@ while running:
             # Spawn JBlock
             if keys[K_j]:
                 if falling_tet is None:
-                    falling_tet = JBlock((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2)
+                    falling_tet = Tet((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2, 'JBlock')
             # Spawn LBlock
             if keys[K_l]:
                 if falling_tet is None:
-                    falling_tet = LBlock((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2)
+                    falling_tet = Tet((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2, 'LBlock')
             # Spawn IBlock
             if keys[K_i]:
                 if falling_tet is None:
-                    falling_tet = IBlock((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2)
+                    falling_tet = Tet((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2, 'IBlock')
             # Spawn OBlock
             if keys[K_o]:
                 if falling_tet is None:
-                    falling_tet = OBlock((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2)
+                    falling_tet = Tet((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2, 'OBlock')
             # Spawn SBlock
             if keys[K_s]:
                 if falling_tet is None:
-                    falling_tet = SBlock((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2)
+                    falling_tet = Tet((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2, 'SBlock')
             # Spawn ZBlock
             if keys[K_z]:
                 if falling_tet is None:
-                    falling_tet = ZBlock((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2)
+                    falling_tet = Tet((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2, 'ZBlock')
             # Spawn TBlock
             if keys[K_t]:
                 if falling_tet is None:
-                    falling_tet = TBlock((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2)
+                    falling_tet = Tet((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2, 'TBlock')
             # Rotate falling block
             if keys[K_r]:
                 if falling_tet is not None:
