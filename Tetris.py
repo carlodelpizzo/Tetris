@@ -42,6 +42,7 @@ class GameGrid:
         self.height = self.y_unit * self.rows
         self.right_edge = self.x + self.width
         self.bottom = self.y + self.height
+        self.color = grid_color
 
     def move_pos(self, x_offset, y_offset):
         self.x += x_offset
@@ -56,6 +57,16 @@ class GameGrid:
         if falling_tet_shadow is not None:
             # noinspection PyUnresolvedReferences
             falling_tet_shadow.update_pos(falling_tet_shadow.x + x_offset, falling_tet_shadow.y + y_offset)
+
+    def draw(self, div_color=None):
+        if div_color is None:
+            div_color = self.color
+        # Draw vertical lines
+        for i in range(0, self.cols + 1):
+            pygame.draw.rect(screen, div_color, (self.x + self.x_unit * i, self.y, 1, self.y_unit * self.rows))
+        # Draw horizontal lines
+        for i in range(0, self.rows + 1):
+            pygame.draw.rect(screen, div_color, (self.x, self.y + self.y_unit * i, self.x_unit * self.cols, 1))
 
 
 class Block:
@@ -284,35 +295,42 @@ class Tet:
         for blk in self.body:
             blk.shadow = True
 
-    def rotate(self, reverse=False):
-        if reverse:
-            if self.rotation - 1 < 0:
-                self.rotation = len(tet_offsets[self.type]) - 1
-            else:
-                self.rotation -= 1
+    def rotate(self, reverse=False, jump=None):
+        if jump is not None:
+            if 0 <= jump <= len(tet_offsets[self.type]) - 1:
+                for i in range(len(tet_offsets[self.type])):
+                    x_offset = grid.x_unit * tet_offsets[self.type][jump][i][0]
+                    y_offset = grid.y_unit * tet_offsets[self.type][jump][i][1]
+                    self.body[i].x = self.x + x_offset
+                    self.body[i].y = self.y + y_offset
+                self.rotation = jump
         else:
-            if self.rotation + 1 > len(tet_offsets[self.type]) - 1:
-                self.rotation = 0
+            if reverse:
+                if self.rotation - 1 < 0:
+                    self.rotation = len(tet_offsets[self.type]) - 1
+                else:
+                    self.rotation -= 1
             else:
-                self.rotation += 1
-        for i in range(len(tet_offsets[self.type])):
-            x_offset = grid.x_unit * tet_offsets[self.type][self.rotation][i][0]
-            y_offset = grid.y_unit * tet_offsets[self.type][self.rotation][i][1]
-            self.body[i].x = self.x + x_offset
-            self.body[i].y = self.y + y_offset
-        if self.collide_block():
-            self.rotate(not reverse)
+                if self.rotation + 1 > len(tet_offsets[self.type]) - 1:
+                    self.rotation = 0
+                else:
+                    self.rotation += 1
+
+            for i in range(len(tet_offsets[self.type])):
+                x_offset = grid.x_unit * tet_offsets[self.type][self.rotation][i][0]
+                y_offset = grid.y_unit * tet_offsets[self.type][self.rotation][i][1]
+                self.body[i].x = self.x + x_offset
+                self.body[i].y = self.y + y_offset
+
+            if self.collide_block():
+                self.rotate(not reverse)
+
         self.correct_off_screen_x()
         self.correct_off_screen_y()
 
-
-def draw_bg_grid(div_color=None):
-    if div_color is None:
-        div_color = grid_color
-    for i in range(0, grid.cols + 1):
-        pygame.draw.rect(screen, div_color, (grid.x_unit * i + grid.x, grid.y, 1, grid.y_unit * grid.rows))
-    for i in range(0, grid.rows + 1):
-        pygame.draw.rect(screen, div_color, (grid.x, grid.y_unit * i + grid.y, grid.x_unit * grid.cols, 1))
+    def draw(self):
+        for blk in self.body:
+            blk.draw()
 
 
 def fall_tet():
@@ -448,15 +466,10 @@ def shadow_tet():
         falling_tet_shadow.update_pos(falling_tet.x, falling_tet.y)
 
         # Match rotation
-        if falling_tet_shadow.rotation != falling_tet.rotation:
-            falling_tet_shadow.rotate()
-            if falling_tet_shadow.rotation != falling_tet.rotation:
-                falling_tet_shadow.rotate(True)
-                falling_tet_shadow.rotate(True)
+        if falling_tet.rotation != falling_tet_shadow.rotation:
+            falling_tet_shadow.rotate(jump=falling_tet.rotation)
 
         falling_tet_shadow.shadow_drop()
-        for blk in falling_tet_shadow.body:
-            blk.draw()
 
 
 # Game grid
@@ -510,7 +523,6 @@ tet_offsets = {
                [(0, 2), (0, 1), (1, 1), (1, 0)]],
     'OBlock': [[(1, 0), (2, 0), (1, 1), (2, 1)]]
 }
-# tet_array_str = ['TBlock', 'JBlock', 'LBlock', 'IBlock', 'OBlock', 'SBlock', 'ZBlock']
 
 # Control variables
 quick_drop = False
@@ -532,10 +544,6 @@ running = True
 paused = False
 while running:
     screen.fill(black)
-    if paused:
-        draw_bg_grid(pink)
-    else:
-        draw_bg_grid()
 
     # Event loop
     for event in pygame.event.get():
@@ -551,34 +559,48 @@ while running:
             if (keys[K_LCTRL] or keys[K_RCTRL]) and keys[K_w]:
                 running = False
                 break
-            # Spawn JBlock
-            if keys[K_j]:
-                if falling_tet is None:
-                    falling_tet = Tet((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2, 'JBlock')
-            # Spawn LBlock
-            if keys[K_l]:
-                if falling_tet is None:
-                    falling_tet = Tet((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2, 'LBlock')
-            # Spawn IBlock
-            if keys[K_i]:
-                if falling_tet is None:
-                    falling_tet = Tet((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2, 'IBlock')
-            # Spawn OBlock
-            if keys[K_o]:
-                if falling_tet is None:
-                    falling_tet = Tet((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2, 'OBlock')
-            # Spawn SBlock
-            if keys[K_s]:
-                if falling_tet is None:
-                    falling_tet = Tet((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2, 'SBlock')
-            # Spawn ZBlock
-            if keys[K_z]:
-                if falling_tet is None:
-                    falling_tet = Tet((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2, 'ZBlock')
+
             # Spawn TBlock
             if keys[K_t]:
                 if falling_tet is None:
-                    falling_tet = Tet((grid.x_unit * grid.cols) / 2 - grid.x_unit, grid.y - grid.y_unit * 2, 'TBlock')
+                    falling_tet = Tet(grid.x + (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2,
+                                      grid.y - grid.y_unit * 2, 'TBlock')
+            # Spawn JBlock
+            if keys[K_j]:
+                if falling_tet is None:
+                    falling_tet = Tet(grid.x + (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2,
+                                      grid.y - grid.y_unit * 2, 'JBlock')
+            # Spawn LBlock
+            if keys[K_l]:
+                if falling_tet is None:
+                    falling_tet = Tet(grid.x + (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2,
+                                      grid.y - grid.y_unit * 2, 'LBlock')
+            # Spawn IBlock
+            if keys[K_i]:
+                if falling_tet is None:
+                    falling_tet = Tet(grid.x + (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2,
+                                      grid.y - grid.y_unit * 2, 'IBlock')
+            # Spawn OBlock
+            if keys[K_o]:
+                if falling_tet is None:
+                    falling_tet = Tet(grid.x + (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2,
+                                      grid.y - grid.y_unit * 2, 'OBlock')
+            # Spawn SBlock
+            if keys[K_s]:
+                if falling_tet is None:
+                    falling_tet = Tet(grid.x + (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2,
+                                      grid.y - grid.y_unit * 2, 'SBlock')
+            # Spawn ZBlock
+            if keys[K_z]:
+                if falling_tet is None:
+                    falling_tet = Tet(grid.x + (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2,
+                                      grid.y - grid.y_unit * 2, 'ZBlock')
+
+            # Generate random block
+            if keys[K_SPACE]:
+                allow_spawn = True
+                spawn_random_tet()
+
             # Rotate falling block
             if keys[K_r]:
                 if falling_tet is not None:
@@ -599,10 +621,7 @@ while running:
             # Turn on quick drop
             if keys[K_DOWN] and not quick_drop:
                 quick_drop = True
-            # Generate random block
-            if keys[K_SPACE]:
-                allow_spawn = True
-                spawn_random_tet()
+
             # Pause
             if keys[K_p] and not paused:
                 paused = True
@@ -649,6 +668,7 @@ while running:
     shadow_tet()
     spawn_random_tet()
     if not paused:
+
         if fall_cool_down_timer == 0 or quick_drop:
             fall_tet()
             clear_blocks()
@@ -656,23 +676,38 @@ while running:
         elif fall_cool_down_timer > 0:
             fall_cool_down_timer -= 1
         lock_tet()
+
         if move_delay_timer == 0:
             player_move_tet()
         elif move_delay_timer > 0:
             move_delay_timer -= 1
+
         if spawn_timer > 1:
             spawn_timer -= 1
         elif spawn_timer == 1:
             allow_spawn = True
             spawn_timer = 0
 
+    # Draw spawn timer
+    if spawn_timer > 0:
+        next_game = main_font.render(str(spawn_timer), True, white)
+        screen.blit(next_game, (10, 10))
+
+    # Draw grid
+    if paused:
+        grid.draw(pink)
+    else:
+        grid.draw()
+
     # Draw blocks
     for block in blocks:
         block.draw()
         block.drop_row()
+    if falling_tet_shadow is not None:
+        # noinspection PyUnresolvedReferences
+        falling_tet_shadow.draw()
     if falling_tet is not None:
-        for block in falling_tet.body:
-            block.draw()
+        falling_tet.draw()
 
     if not paused:
         round_frame_timer += 1
