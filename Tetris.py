@@ -89,7 +89,7 @@ class Block:
             pygame.draw.rect(screen, accent2, (self.x + 5, self.y + 5, self.width - 10, self.height - 10))
             pygame.draw.rect(screen, accent1, (self.x + 6, self.y + 6, self.width - 12, self.height - 12))
             pygame.draw.rect(screen, accent0, (self.x + 8, self.y + 8, self.width - 16, self.height - 16))
-            pygame.draw.rect(screen, black, (self.x + 9, self.y + 9, self.width - 18, self.height - 18))
+            pygame.draw.rect(screen, black, (self.x + 10, self.y + 10, self.width - 20, self.height - 20))
 
     def lock(self):
         if not self.locked:
@@ -254,7 +254,6 @@ class Tet:
             blk.change_color(new_color)
 
     def shadow_blocks(self):
-        self.color = [self.color[0] / 2, self.color[1] / 2, self.color[2] / 2]
         self.change_block_colors()
         for blk in self.body:
             blk.shadow = True
