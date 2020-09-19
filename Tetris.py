@@ -113,6 +113,7 @@ class Block:
             if len(row_state[self.grid_pos[0]]) > 0:
                 row_state[self.grid_pos[0]].pop(0)
             self.grid_pos = (self.grid_pos[0] - self.drop, self.grid_pos[1])
+            # noinspection PyTypeChecker
             row_state[self.grid_pos[0]].append(1)
             self.y += grid.y_unit * self.drop
 
