@@ -132,6 +132,8 @@ class Block:
                         return
             self.grid_pos = [row_pos, col_pos]
             row_state[row_pos][col_pos - 1] = self
+            if self not in blocks:
+                blocks.append(self)
 
     def unlock(self):
         global row_state
@@ -152,7 +154,8 @@ class Block:
             if blk.grid_pos[0] >= self.grid_pos[0] and blk.grid_pos[1] == self.grid_pos[1]:
                 blk.drop += 1
         cleared_blocks_count += 1
-        blocks.pop(blocks.index(self))
+        if self in blocks:
+            blocks.pop(blocks.index(self))
 
     def change_color(self, change=None):
         if change is None:
@@ -275,9 +278,11 @@ class Tet:
 
     def lock_blocks(self):
         if self.y >= grid.y:
-            for i in range(len(self.body)):
-                blocks.append(self.body[i])
-                blocks[len(blocks) - 1].lock()
+            # for i in range(len(self.body)):
+            #     blocks.append(self.body[i])
+            #     blocks[len(blocks) - 1].lock()
+            for blk in self.body:
+                blk.lock()
         elif self.y < grid.y:
             round_over()
 
