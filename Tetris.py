@@ -347,7 +347,10 @@ class Tet:
     def needs_to_die(self):
         if not self.locked and self.check_collide_drop():
             self.locked = True
-            self.death_timer = lock_delay
+            if insta_drop:
+                self.death_timer = int(lock_delay * 1.3)
+            else:
+                self.death_timer = lock_delay
         if self.death_timer > 0 and self.check_collide_drop():
             self.death_timer -= 1
         elif self.death_timer > 0 and not self.check_collide_drop():
@@ -712,33 +715,41 @@ while running:
         mouse_pos = pygame.mouse.get_pos()
         grid.new_pos(mouse_pos[0], mouse_pos[1])
 
-    # Block updates
+    # Game updates
     shadow_tet()
-    spawn_next_tet()
     if not paused:
+        spawn_next_tet()
+        # Clear any rows that are filled
         clear_rows()
+
+        # Tet updates
         if fall_cool_down_timer == 0:
             if falling_tet is not None:
+                # Drop tet one grid unit
                 falling_tet.move_y(grid.y_unit)
             fall_cool_down_timer = fall_cool_down
         elif fall_cool_down_timer > 0:
             fall_cool_down_timer -= 1
 
+        # Quick/Insta drop tet
         if falling_tet is not None:
             if quick_drop:
                 falling_tet.move_y(grid.y_unit)
             elif insta_drop:
                 falling_tet.insta_drop()
 
+        # Lock tet
         if falling_tet is not None and falling_tet.needs_to_die():
             falling_tet = None
             spawn_next_tet()
 
+        # Player movements
         if move_delay_timer == 0:
             player_move_tet()
         elif move_delay_timer > 0:
             move_delay_timer -= 1
 
+        # Timer to start next round
         if next_round_timer > 1:
             next_round_timer -= 1
         elif next_round_timer == 1:
