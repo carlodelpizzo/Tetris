@@ -61,6 +61,8 @@ class GameGrid:
         if falling_tet_shadow is not None:
             # noinspection PyUnresolvedReferences
             falling_tet_shadow.update_pos(falling_tet_shadow.x + x_offset, falling_tet_shadow.y + y_offset)
+        if next_tet is not None:
+            next_tet.new_pos(next_tet.x + x_offset, next_tet.y + y_offset)
 
     def draw(self, div_color=None):
         if div_color is None:
@@ -287,10 +289,15 @@ class Tet:
         for blk in self.body:
             blk.change_color(new_color)
 
-    def shadow_blocks(self):
-        self.change_block_colors()
-        for blk in self.body:
-            blk.shadow = True
+    def shadow_blocks(self, do=True):
+        if do:
+            self.change_block_colors()
+            for blk in self.body:
+                blk.shadow = True
+        else:
+            self.change_block_colors(default_block_color)
+            for blk in self.body:
+                blk.shadow = False
 
     def rotate(self, reverse=False, jump=None):
         if jump is not None:
@@ -377,22 +384,41 @@ def shadow_tet():
         falling_tet_shadow.insta_drop()
 
 
-def spawn_random_tet(ran_pos=False):
+def spawn_next_tet(ran_pos=False):
     global falling_tet
     global last_spawned_tet
+    global next_tet
 
-    if falling_tet is None and allow_spawn:
+    if next_tet is None:
         new_tet = random.choice(list(tet_offsets.keys()))
         # Prevent same block 3 times in a row
         if new_tet == last_spawned_tet[0] and new_tet == last_spawned_tet[1]:
-            spawn_random_tet()
+            spawn_next_tet()
             return
         # 2/3 chance to re-roll if same block as last
         elif new_tet == last_spawned_tet[1]:
             roll = random.randint(0, 2)
             if roll != 0:
                 last_spawned_tet = [last_spawned_tet[1], new_tet]
-                spawn_random_tet()
+                spawn_next_tet()
+                return
+
+        next_tet = Tet(grid.right_edge + 15, grid.y, new_tet)
+        next_tet.change_block_colors()
+        last_spawned_tet = [last_spawned_tet[1], new_tet]
+
+    elif next_tet is not None and falling_tet is None and allow_spawn:
+        new_tet = random.choice(list(tet_offsets.keys()))
+        # Prevent same block 3 times in a row
+        if new_tet == last_spawned_tet[0] and new_tet == last_spawned_tet[1]:
+            spawn_next_tet()
+            return
+        # 2/3 chance to re-roll if same block as last
+        elif new_tet == last_spawned_tet[1]:
+            roll = random.randint(0, 2)
+            if roll != 0:
+                last_spawned_tet = [last_spawned_tet[1], new_tet]
+                spawn_next_tet()
                 return
         if ran_pos:
             ran_x = random.randint(grid.x, grid.x_unit * grid.cols)
@@ -401,8 +427,11 @@ def spawn_random_tet(ran_pos=False):
 
         ran_x = int(ran_x - (ran_x % grid.x_unit))
 
-        falling_tet = Tet(grid.x + ran_x, grid.y + -grid.y_unit * 2, new_tet)
-
+        falling_tet = next_tet
+        next_tet = Tet(grid.right_edge + 10, grid.y, new_tet)
+        next_tet.change_block_colors()
+        falling_tet.change_block_colors(default_block_color)
+        falling_tet.new_pos(grid.x + ran_x, grid.y + -grid.y_unit * 2)
         last_spawned_tet = [last_spawned_tet[1], new_tet]
 
 
@@ -460,7 +489,7 @@ grid_rows = 15
 grid_cols = 10
 grid_width = 400
 grid_height = 600
-grid = GameGrid(120, 69, grid_width, grid_height, grid_rows, grid_cols)
+grid = GameGrid(20, 20, grid_width, grid_height, grid_rows, grid_cols)
 
 # Delays and cool downs
 fall_cool_down = frame_rate
@@ -471,6 +500,7 @@ hold_delay = frame_rate / 5
 default_block_color = white
 blocks = []
 last_spawned_tet = ['', '']
+next_tet = None
 falling_tet = None
 falling_tet_shadow = None
 row_state = {}
@@ -586,7 +616,7 @@ while running:
             # Generate random block
             if keys[K_SPACE]:
                 allow_spawn = True
-                spawn_random_tet()
+                spawn_next_tet()
 
             # Rotate falling block
             if keys[K_r]:
@@ -656,7 +686,7 @@ while running:
     # Block updates
     blocks.sort(key=lambda blk: blk.grid_pos[0])
     shadow_tet()
-    spawn_random_tet()
+    spawn_next_tet()
     if not paused:
 
         if fall_cool_down_timer == 0 or quick_drop:
@@ -669,7 +699,7 @@ while running:
 
         if falling_tet is not None and falling_tet.needs_to_die():
             falling_tet = None
-            spawn_random_tet()
+            spawn_next_tet()
 
         if move_delay_timer == 0:
             player_move_tet()
@@ -694,6 +724,9 @@ while running:
         grid.draw()
 
     # Draw blocks
+    if next_tet is not None:
+        # noinspection PyUnresolvedReferences
+        next_tet.draw()
     if falling_tet_shadow is not None:
         # noinspection PyUnresolvedReferences
         falling_tet_shadow.draw()
