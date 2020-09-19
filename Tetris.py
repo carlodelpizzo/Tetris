@@ -764,6 +764,10 @@ while running:
         next_game = main_font.render(str(next_round_timer), True, white)
         screen.blit(next_game, (10, 10))
 
+    # Draw num of rows cleared
+    rows_cleared_txt = main_font.render(str(int(cleared_blocks_count / grid.cols)) + ' cleared rows', True, white)
+    screen.blit(rows_cleared_txt, (grid.right_edge + 20, grid.y + grid.y_unit * 5))
+
     # Draw grid
     if paused:
         grid.draw(pink)
