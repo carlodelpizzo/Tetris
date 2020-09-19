@@ -4,14 +4,15 @@ import random
 
 
 pygame.init()
-clock = pygame.time.Clock()
-frame_rate = 60
-# Screen and game grid dimensions
+
+# Screen default
 screen_width = 600
 screen_height = 700
 screen = pygame.display.set_mode((screen_width, screen_height), RESIZABLE)
+
 # Title
 pygame.display.set_caption('Tetris for Ashton')
+
 # Colors
 black = [0, 0, 0]
 white = [255, 255, 255]
@@ -24,6 +25,7 @@ yellow = [255, 255, 0]
 purple = [128, 0, 128]
 pink = [255, 192, 203]
 grid_color = [50, 50, 50]
+
 # Font
 font_size = 25
 font_face = "Helvetica"
@@ -78,7 +80,7 @@ class Block:
         self.width = grid.x_unit
         self.height = grid.y_unit
         self.locked = False
-        self.color = white
+        self.color = default_block_color
         self.drop = 0
         self.type = tet_type
         self.grid_pos = [0, 0]
@@ -151,8 +153,8 @@ class Block:
 
     def change_color(self, change=None):
         if change is None:
-            if self.type in tet_color_dict:
-                self.color = tet_color_dict[self.type]
+            if self.type in tet_colors:
+                self.color = tet_colors[self.type]
             else:
                 self.color = pink
         else:
@@ -161,10 +163,10 @@ class Block:
 
 class Tet:
     def __init__(self, x, y, kind):
-        if kind in tet_color_dict:
-            tet_color = tet_color_dict[kind]
+        if kind in tet_colors:
+            tet_color = tet_colors[kind]
         else:
-            tet_color = white
+            tet_color = default_block_color
         self.x = int(x)
         self.y = int(y)
         self.rotation = 0
@@ -338,6 +340,7 @@ class Tet:
             self.death_timer = -1
         elif self.death_timer == 0 and self.check_collide_drop():
             self.lock_blocks()
+            clear_blocks()
             return True
         return False
 
@@ -424,7 +427,7 @@ def round_over():
     global round_frame_timer
     global rounds_played_count
     global cleared_blocks_count
-    global spawn_timer
+    global next_round_timer
     global allow_spawn
 
     num_active = int(len(blocks))
@@ -445,8 +448,12 @@ def round_over():
         print('########################################################################################')
     round_frame_timer = 0
     allow_spawn = False
-    spawn_timer = frame_rate * 4
+    next_round_timer = frame_rate * 4
 
+
+# Game clock
+clock = pygame.time.Clock()
+frame_rate = 60
 
 # Game grid
 grid_rows = 15
@@ -456,11 +463,12 @@ grid_height = 600
 grid = GameGrid(120, 69, grid_width, grid_height, grid_rows, grid_cols)
 
 # Delays and cool downs
-fall_cool_down = frame_rate / 2
+fall_cool_down = frame_rate
 lock_delay = frame_rate / 2
 hold_delay = frame_rate / 5
 
 # Game data
+default_block_color = white
 blocks = []
 last_spawned_tet = ['', '']
 falling_tet = None
@@ -470,8 +478,11 @@ for r in range(1, grid_rows + 1):
     row_state[r] = []
     for c in range(1, grid_cols + 1):
         row_state[r].append(None)
-tet_color_dict = {'TBlock': purple, 'JBlock': blue, 'LBlock': orange, 'IBlock': cyan, 'OBlock': yellow,
-                  'SBlock': green, 'ZBlock': red}
+tet_colors = {'TBlock': purple, 'JBlock': blue, 'LBlock': orange, 'IBlock': cyan, 'OBlock': yellow,
+              'SBlock': green, 'ZBlock': red}
+
+# 'TetType': [[offsets for rotation 0 = (block0), (block1), ... ], [offsets for rotation 1], ... ]]
+# Example: x/y_offset = tet_offsets['TetType'][rotation #][block #][x or y]
 tet_offsets = {
     'TBlock': [[(0, 1), (1, 1), (2, 1), (1, 2)],
                [(1, 0), (1, 1), (1, 2), (0, 1)],
@@ -512,7 +523,7 @@ move_delay_timer = 0
 fall_cool_down_timer = 0
 round_frame_timer = 0
 global_frame_timer = 0
-spawn_timer = 0
+next_round_timer = 0
 rounds_played_count = 0
 cleared_blocks_count = 0
 
@@ -665,15 +676,15 @@ while running:
         elif move_delay_timer > 0:
             move_delay_timer -= 1
 
-        if spawn_timer > 1:
-            spawn_timer -= 1
-        elif spawn_timer == 1:
+        if next_round_timer > 1:
+            next_round_timer -= 1
+        elif next_round_timer == 1:
             allow_spawn = True
-            spawn_timer = 0
+            next_round_timer = 0
 
-    # Draw spawn timer
-    if spawn_timer > 0:
-        next_game = main_font.render(str(spawn_timer), True, white)
+    # Draw next round timer
+    if next_round_timer > 0:
+        next_game = main_font.render(str(next_round_timer), True, white)
         screen.blit(next_game, (10, 10))
 
     # Draw grid
