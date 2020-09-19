@@ -109,24 +109,44 @@ class Block:
     def drop_row(self):
         global grid_state
 
-        self.y += grid.y_unit * self.drop
-        self.grid_pos = (self.grid_pos[0], self.grid_pos[1] + self.drop)
+        if self.drop > 0 and self.grid_pos[0] != -1:
+            grid_state[self.grid_pos[0]][self.grid_pos[1]] = 0
+            grid_state[self.grid_pos[0] - self.drop][self.grid_pos[1]] = 1
+            self.grid_pos = (self.grid_pos[0] - self.drop, self.grid_pos[1])
+            self.y += grid.y_unit * self.drop
+
         self.drop = 0
 
     def lock(self):
         global grid_state
 
-        self.change_color()
-        self.locked = True
         row_pos = grid.rows - int((self.y - grid.y) / grid.y_unit) - 1
         col_pos = int((self.x - grid.x) / grid.x_unit)
+
+        if 0 <= row_pos <= grid.rows - 1:
+            pass
+        else:
+            row_pos = -1
+        if 0 <= col_pos <= grid.cols - 1:
+            pass
+        else:
+            col_pos = -1
+
         self.grid_pos = (row_pos, col_pos)
+
+        if self.grid_pos[0] != -1:
+            grid_state[self.grid_pos[0]][self.grid_pos[1]] = 1
+
         if self not in blocks:
             blocks.append(self)
-        print(self.grid_pos)
+        self.change_color()
+        self.locked = True
 
     def unlock(self):
         global grid_state
+
+        if self.grid_pos[0] in grid_state:
+            grid_state[self.grid_pos[0]][self.grid_pos[1]] = 0
 
         self.locked = False
 
@@ -134,12 +154,12 @@ class Block:
         global grid_state
         global cleared_blocks_count
 
-        for blk in blocks:
-            if blk.grid_pos[0] >= self.grid_pos[0] and blk.grid_pos[1] == self.grid_pos[1]:
-                blk.drop += 1
+        if self.grid_pos[0] != -1:
+            grid_state[self.grid_pos[0]][self.grid_pos[1]] = 0
 
-        if self in blocks:
-            blocks.pop(blocks.index(self))
+        for blk in blocks:
+            if blk.grid_pos[0] > self.grid_pos[0] and blk.grid_pos[1] == self.grid_pos[1]:
+                blk.drop += 1
 
         cleared_blocks_count += 1
 
@@ -440,6 +460,25 @@ def spawn_next_tet(ran_pos=False):
 def clear_blocks():
     global grid_state
 
+    to_clear = []
+    for row in grid_state:
+        num_filled = 0
+        for i in range(len(grid_state[row])):
+            if grid_state[row][i] == 1:
+                num_filled += grid_state[row][i]
+        if num_filled >= grid.cols:
+            to_clear.append(row)
+
+    i_to_murder = []
+    for i in range(len(to_clear)):
+        for j in range(len(blocks)):
+            if blocks[j].grid_pos[0] == to_clear[i]:
+                blocks[j].clear()
+                i_to_murder.append(j)
+    i_to_murder.sort(reverse=True)
+    for i in i_to_murder:
+        blocks.pop(i)
+
 
 def round_over():
     global blocks
@@ -687,7 +726,6 @@ while running:
         grid.new_pos(mouse_pos[0], mouse_pos[1])
 
     # Block updates
-    blocks.sort(key=lambda blk: blk.grid_pos[0])
     shadow_tet()
     spawn_next_tet()
     if not paused:
