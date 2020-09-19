@@ -30,6 +30,7 @@ grid_color = [50, 50, 50]
 font_size = 25
 font_face = "Helvetica"
 main_font = pygame.font.SysFont(font_face, font_size)
+small_font = pygame.font.SysFont(font_face, 15)
 
 
 class GameGrid:
@@ -88,6 +89,7 @@ class Block:
         self.type = tet_type
         self.grid_pos = (-1, -1)
         self.shadow = False
+        self.kill_me = False
 
     def draw(self):
         accent0 = [self.color[0] * 0.2, self.color[1] * 0.2, self.color[2] * 0.2]
@@ -107,19 +109,16 @@ class Block:
             pygame.draw.rect(screen, black, (self.x + 11, self.y + 11, self.width - 22, self.height - 22))
 
     def drop_row(self):
-        global grid_state
-
         if self.drop > 0 and self.grid_pos[0] != -1:
-            grid_state[self.grid_pos[0]][self.grid_pos[1]] = 0
-            grid_state[self.grid_pos[0] - self.drop][self.grid_pos[1]] = 1
+            if len(row_state[self.grid_pos[0]]) > 0:
+                row_state[self.grid_pos[0]].pop(0)
             self.grid_pos = (self.grid_pos[0] - self.drop, self.grid_pos[1])
+            row_state[self.grid_pos[0]].append(1)
             self.y += grid.y_unit * self.drop
 
-        self.drop = 0
+            self.drop = 0
 
     def lock(self):
-        global grid_state
-
         row_pos = grid.rows - int((self.y - grid.y) / grid.y_unit) - 1
         col_pos = int((self.x - grid.x) / grid.x_unit)
 
@@ -133,33 +132,25 @@ class Block:
             col_pos = -1
 
         self.grid_pos = (row_pos, col_pos)
-
-        if self.grid_pos[0] != -1:
-            grid_state[self.grid_pos[0]][self.grid_pos[1]] = 1
-
-        if self not in blocks:
-            blocks.append(self)
+        row_state[self.grid_pos[0]].append(1)
         self.change_color()
         self.locked = True
 
     def unlock(self):
-        global grid_state
-
-        if self.grid_pos[0] in grid_state:
-            grid_state[self.grid_pos[0]][self.grid_pos[1]] = 0
-
+        if len(row_state[self.grid_pos[0]]) > 0:
+            row_state[self.grid_pos[0]].pop(0)
         self.locked = False
 
     def clear(self):
-        global grid_state
         global cleared_blocks_count
-
-        if self.grid_pos[0] != -1:
-            grid_state[self.grid_pos[0]][self.grid_pos[1]] = 0
 
         for blk in blocks:
             if blk.grid_pos[0] > self.grid_pos[0] and blk.grid_pos[1] == self.grid_pos[1]:
                 blk.drop += 1
+
+        self.grid_pos = (-1, -1)
+        self.y = -1000
+        self.kill_me = True
 
         cleared_blocks_count += 1
 
@@ -172,12 +163,9 @@ class Block:
         else:
             self.color = change
 
-
-class FakeBlock(Block):
-    def __init__(self):
-        x = -1
-        y = -1
-        super().__init__(x, y)
+    def show_coord(self):
+        coord = small_font.render(str(self.grid_pos), True, black)
+        screen.blit(coord, (self.x + 6, self.y + 6))
 
 
 class Tet:
@@ -294,11 +282,9 @@ class Tet:
 
     def lock_blocks(self):
         if self.y >= grid.y:
-            # for i in range(len(self.body)):
-            #     blocks.append(self.body[i])
-            #     blocks[len(blocks) - 1].lock()
-            for blk in self.body:
-                blk.lock()
+            for i in range(len(self.body)):
+                blocks.append(self.body[i])
+                blocks[len(blocks) - 1].lock()
         elif self.y < grid.y:
             round_over()
 
@@ -369,7 +355,7 @@ class Tet:
             self.death_timer = -1
         elif self.death_timer == 0 and self.check_collide_drop():
             self.lock_blocks()
-            clear_blocks()
+            clear_rows()
             return True
         return False
 
@@ -457,27 +443,22 @@ def spawn_next_tet(ran_pos=False):
         last_spawned_tet = [last_spawned_tet[1], new_tet]
 
 
-def clear_blocks():
-    global grid_state
+def clear_rows():
+    for r in range(len(row_state)):
+        if len(row_state[r]) >= grid.cols:
+            row_state[r] = []
+            for blk in blocks:
+                if blk.grid_pos[0] == r:
+                    blk.clear()
+    to_kill = []
+    for blk in blocks:
+        if blk.kill_me:
+            to_kill.append(blocks.index(blk))
+        blk.drop_row()
 
-    to_clear = []
-    for row in grid_state:
-        num_filled = 0
-        for i in range(len(grid_state[row])):
-            if grid_state[row][i] == 1:
-                num_filled += grid_state[row][i]
-        if num_filled >= grid.cols:
-            to_clear.append(row)
-
-    i_to_murder = []
-    for i in range(len(to_clear)):
-        for j in range(len(blocks)):
-            if blocks[j].grid_pos[0] == to_clear[i]:
-                blocks[j].clear()
-                i_to_murder.append(j)
-    i_to_murder.sort(reverse=True)
-    for i in i_to_murder:
-        blocks.pop(i)
+    to_kill.sort(reverse=True)
+    for i in range(len(to_kill)):
+        blocks.pop(to_kill[i])
 
 
 def round_over():
@@ -533,11 +514,10 @@ last_spawned_tet = ['', '']
 next_tet = None
 falling_tet = None
 falling_tet_shadow = None
-grid_state = {}
-for r in range(grid.rows):
-    grid_state[r] = []
-    for c in range(grid.cols):
-        grid_state[r].append(0)
+row_state = []
+for row in range(grid.rows):
+    row_state.append([])
+
 tet_colors = {'TBlock': purple, 'JBlock': blue, 'LBlock': orange, 'IBlock': cyan, 'OBlock': yellow,
               'SBlock': green, 'ZBlock': red}
 
@@ -578,6 +558,7 @@ move_left = False
 move_right = False
 allow_spawn = False
 mouse_hold = False
+show_coords = False
 
 # Timers and counters
 move_delay_timer = 0
@@ -607,6 +588,12 @@ while running:
             if (keys[K_LCTRL] or keys[K_RCTRL]) and keys[K_w]:
                 running = False
                 break
+
+            # Show block coords
+            if keys[K_x] and not show_coords:
+                show_coords = True
+            elif keys[K_x] and show_coords:
+                show_coords = False
 
             # Spawn TBlock
             if keys[K_t]:
@@ -729,11 +716,10 @@ while running:
     shadow_tet()
     spawn_next_tet()
     if not paused:
-
+        clear_rows()
         if fall_cool_down_timer == 0:
             if falling_tet is not None:
                 falling_tet.move_y(grid.y_unit)
-            clear_blocks()
             fall_cool_down_timer = fall_cool_down
         elif fall_cool_down_timer > 0:
             fall_cool_down_timer -= 1
@@ -785,7 +771,8 @@ while running:
         falling_tet.draw()
     for block in blocks:
         block.draw()
-        block.drop_row()
+        if show_coords:
+            block.show_coord()
 
     if not paused:
         round_frame_timer += 1
