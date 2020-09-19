@@ -60,8 +60,9 @@ class GameGrid:
             falling_tet.new_pos(falling_tet.x + x_offset, falling_tet.y + y_offset)
         if falling_tet_shadow is not None:
             # noinspection PyUnresolvedReferences
-            falling_tet_shadow.update_pos(falling_tet_shadow.x + x_offset, falling_tet_shadow.y + y_offset)
+            falling_tet_shadow.new_pos(falling_tet_shadow.x + x_offset, falling_tet_shadow.y + y_offset)
         if next_tet is not None:
+            # noinspection PyUnresolvedReferences
             next_tet.new_pos(next_tet.x + x_offset, next_tet.y + y_offset)
 
     def draw(self, div_color=None):
