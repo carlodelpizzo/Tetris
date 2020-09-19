@@ -86,7 +86,7 @@ class Block:
         self.color = default_block_color
         self.drop = 0
         self.type = tet_type
-        self.grid_pos = [0, 0]
+        self.grid_pos = (-1, -1)
         self.shadow = False
 
     def draw(self):
@@ -107,55 +107,41 @@ class Block:
             pygame.draw.rect(screen, black, (self.x + 11, self.y + 11, self.width - 22, self.height - 22))
 
     def drop_row(self):
-        global row_state
+        global grid_state
 
         self.y += grid.y_unit * self.drop
-
-        if self.grid_pos[0] in row_state:
-            row_state[self.grid_pos[0]][self.grid_pos[1] - 1] = None
-        self.grid_pos = [self.grid_pos[0] - self.drop, self.grid_pos[1]]
-        if self.grid_pos[0] in row_state:
-            row_state[self.grid_pos[0]][self.grid_pos[1] - 1] = self
+        self.grid_pos = (self.grid_pos[0], self.grid_pos[1] + self.drop)
         self.drop = 0
 
     def lock(self):
-        global row_state
+        global grid_state
 
-        if not self.locked:
-            self.change_color()
-            self.locked = True
-            row_pos = grid.rows - int((self.y - grid.y) / grid.y_unit)
-            col_pos = int((self.x - grid.x) / grid.x_unit) + 1
-            if row_pos in row_state and col_pos in row_state[row_pos]:
-                for blk in blocks:
-                    if blk is not self and blk.grid_pos == self.grid_pos:
-                        return
-            self.grid_pos = [row_pos, col_pos]
-            row_state[row_pos][col_pos - 1] = self
-            if self not in blocks:
-                blocks.append(self)
+        self.change_color()
+        self.locked = True
+        row_pos = grid.rows - int((self.y - grid.y) / grid.y_unit) - 1
+        col_pos = int((self.x - grid.x) / grid.x_unit)
+        self.grid_pos = (row_pos, col_pos)
+        if self not in blocks:
+            blocks.append(self)
+        print(self.grid_pos)
 
     def unlock(self):
-        global row_state
+        global grid_state
 
-        if self.locked:
-            self.locked = False
-            if self.grid_pos[0] in row_state:
-                row_state[self.grid_pos[0]][self.grid_pos[1] - 1] = None
+        self.locked = False
 
     def clear(self):
-        global row_state
+        global grid_state
         global cleared_blocks_count
-
-        if self.grid_pos[0] in row_state:
-            row_state[self.grid_pos[0]][self.grid_pos[1] - 1] = None
 
         for blk in blocks:
             if blk.grid_pos[0] >= self.grid_pos[0] and blk.grid_pos[1] == self.grid_pos[1]:
                 blk.drop += 1
-        cleared_blocks_count += 1
+
         if self in blocks:
             blocks.pop(blocks.index(self))
+
+        cleared_blocks_count += 1
 
     def change_color(self, change=None):
         if change is None:
@@ -167,8 +153,15 @@ class Block:
             self.color = change
 
 
+class FakeBlock(Block):
+    def __init__(self):
+        x = -1
+        y = -1
+        super().__init__(x, y)
+
+
 class Tet:
-    def __init__(self, x, y, kind):
+    def __init__(self, x, y, kind=''):
         if kind in tet_colors:
             tet_color = tet_colors[kind]
         else:
@@ -181,7 +174,9 @@ class Tet:
         self.death_timer = -1
         self.type = kind
         self.color = tet_color
-        if kind in tet_offsets:
+        if kind == '':
+            self.body.append(Block(self.x, self.y))
+        elif kind in tet_offsets:
             for i in range(len(tet_offsets[kind][0])):
                 x_offset = grid.x_unit * tet_offsets[kind][0][i][0]
                 y_offset = grid.y_unit * tet_offsets[kind][0][i][1]
@@ -232,8 +227,9 @@ class Tet:
             if self_blk.y + grid.y_unit >= grid.bottom:
                 return True
             for blk in blocks:
-                if self_blk.y + grid.y_unit == blk.y and self_blk.x == blk.x:
-                    return True
+                if self_blk is not blk:
+                    if self_blk.y + grid.y_unit == blk.y and self_blk.x == blk.x:
+                        return True
         return False
 
     def check_collide_block(self, x_mod=0, y_mod=0):
@@ -437,23 +433,12 @@ def spawn_next_tet(ran_pos=False):
         next_tet = Tet(grid.right_edge + 10, grid.y, new_tet)
         next_tet.change_block_colors()
         falling_tet.change_block_colors(default_block_color)
-        falling_tet.new_pos(grid.x + ran_x, grid.y + -grid.y_unit * 2)
+        falling_tet.new_pos(grid.x + ran_x, grid.y + -grid.y_unit * 4)
         last_spawned_tet = [last_spawned_tet[1], new_tet]
 
 
 def clear_blocks():
-    global row_state
-
-    for row in row_state:
-        if isinstance(row_state[row], list):
-            counter = 0
-            for col in row_state[row]:
-                if col is None:
-                    break
-                counter += 1
-            if counter == grid_cols:
-                for blk in row_state[row]:
-                    blk.clear()
+    global grid_state
 
 
 def round_over():
@@ -509,11 +494,11 @@ last_spawned_tet = ['', '']
 next_tet = None
 falling_tet = None
 falling_tet_shadow = None
-row_state = {}
-for r in range(1, grid_rows + 1):
-    row_state[r] = []
-    for c in range(1, grid_cols + 1):
-        row_state[r].append(None)
+grid_state = {}
+for r in range(grid.rows):
+    grid_state[r] = []
+    for c in range(grid.cols):
+        grid_state[r].append(0)
 tet_colors = {'TBlock': purple, 'JBlock': blue, 'LBlock': orange, 'IBlock': cyan, 'OBlock': yellow,
               'SBlock': green, 'ZBlock': red}
 
@@ -549,6 +534,7 @@ tet_offsets = {
 
 # Control variables
 quick_drop = False
+insta_drop = False
 move_left = False
 move_right = False
 allow_spawn = False
@@ -618,6 +604,11 @@ while running:
                 if falling_tet is None:
                     falling_tet = Tet(grid.x + (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2,
                                       grid.y - grid.y_unit * 2, 'ZBlock')
+            # Spawn single block
+            if keys[K_f]:
+                if falling_tet is None:
+                    falling_tet = Tet(grid.x + (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2,
+                                      grid.y - grid.y_unit * 2)
 
             # Generate random block
             if keys[K_SPACE]:
@@ -646,6 +637,9 @@ while running:
             # Turn on quick drop
             if keys[K_DOWN] and not quick_drop:
                 quick_drop = True
+            # Turn on insta drop
+            if keys[K_UP] and not insta_drop:
+                insta_drop = True
 
             # Pause
             if keys[K_p] and not paused:
@@ -658,6 +652,9 @@ while running:
             # Turn off quick drop
             if not keys[K_DOWN] and quick_drop:
                 quick_drop = False
+            # Turn off insta drop
+            if not keys[K_UP] and insta_drop:
+                insta_drop = False
             # Stop move falling block right
             if not keys[K_RIGHT] and move_right:
                 move_delay_timer = 0
@@ -695,13 +692,19 @@ while running:
     spawn_next_tet()
     if not paused:
 
-        if fall_cool_down_timer == 0 or quick_drop:
+        if fall_cool_down_timer == 0:
             if falling_tet is not None:
                 falling_tet.move_y(grid.y_unit)
             clear_blocks()
             fall_cool_down_timer = fall_cool_down
         elif fall_cool_down_timer > 0:
             fall_cool_down_timer -= 1
+
+        if falling_tet is not None:
+            if quick_drop:
+                falling_tet.move_y(grid.y_unit)
+            elif insta_drop:
+                falling_tet.insta_drop()
 
         if falling_tet is not None and falling_tet.needs_to_die():
             falling_tet = None
