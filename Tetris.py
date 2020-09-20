@@ -57,13 +57,11 @@ class GameGrid:
         for blk in blocks:
             blk.x += x_offset
             blk.y += y_offset
-        if falling_tet is not None:
+        if isinstance(falling_tet, Tet):
             falling_tet.new_pos(falling_tet.x + x_offset, falling_tet.y + y_offset)
-        if falling_tet_shadow is not None:
-            # noinspection PyUnresolvedReferences
+        if isinstance(falling_tet_shadow, Tet):
             falling_tet_shadow.new_pos(falling_tet_shadow.x + x_offset, falling_tet_shadow.y + y_offset)
-        if next_tet is not None:
-            # noinspection PyUnresolvedReferences
+        if isinstance(next_tet, Tet):
             next_tet.new_pos(next_tet.x + x_offset, next_tet.y + y_offset)
 
     def draw(self, div_color=None):
@@ -367,7 +365,7 @@ class Tet:
 def player_move_tet():
     global falling_tet
 
-    if falling_tet is not None:
+    if isinstance(falling_tet, Tet):
         if move_left:
             falling_tet.move_x(-grid.x_unit)
         elif move_right:
@@ -378,14 +376,14 @@ def shadow_tet():
     global falling_tet_shadow
 
     # Create or destroy shadow
-    if falling_tet_shadow is None and falling_tet is not None:
+    if falling_tet_shadow is None and isinstance(falling_tet, Tet):
         falling_tet_shadow = Tet(falling_tet.x, falling_tet.y, falling_tet.type)
         falling_tet_shadow.shadow_blocks()
-    elif falling_tet_shadow is not None and (falling_tet is None or falling_tet.type != falling_tet_shadow.type):
+    elif isinstance(falling_tet_shadow, Tet) and (falling_tet is None or falling_tet.type != falling_tet_shadow.type):
         falling_tet_shadow = None
 
     # Cast shadow from falling tet
-    if falling_tet_shadow is not None and falling_tet is not None:
+    if isinstance(falling_tet_shadow, Tet) and isinstance(falling_tet, Tet):
         # Reset shadow pos
         falling_tet_shadow.new_pos(falling_tet.x, falling_tet.y)
 
@@ -419,7 +417,7 @@ def spawn_next_tet(ran_pos=False):
         next_tet.change_block_colors()
         last_spawned_tet = [last_spawned_tet[1], new_tet]
 
-    elif next_tet is not None and falling_tet is None and allow_spawn:
+    elif isinstance(next_tet, Tet) and falling_tet is None and allow_spawn:
         new_tet = random.choice(list(tet_offsets.keys()))
         # Prevent same block 3 times in a row
         if new_tet == last_spawned_tet[0] and new_tet == last_spawned_tet[1]:
@@ -647,10 +645,10 @@ while running:
 
             # Rotate falling block
             if keys[K_r]:
-                if falling_tet is not None and not paused:
+                if isinstance(falling_tet, Tet) and not paused:
                     falling_tet.rotate()
             elif keys[K_e]:
-                if falling_tet is not None and not paused:
+                if isinstance(falling_tet, Tet) and not paused:
                     falling_tet.rotate(True)
             # Move falling block right
             if keys[K_RIGHT] and not move_right:
@@ -725,7 +723,7 @@ while running:
 
         # Tet updates
         if fall_cool_down_timer == 0:
-            if falling_tet is not None:
+            if isinstance(falling_tet, Tet):
                 # Drop tet one grid unit
                 falling_tet.move_y(grid.y_unit)
             fall_cool_down_timer = fall_cool_down
@@ -733,14 +731,14 @@ while running:
             fall_cool_down_timer -= 1
 
         # Quick/Insta drop tet
-        if falling_tet is not None:
+        if isinstance(falling_tet, Tet):
             if quick_drop:
                 falling_tet.move_y(grid.y_unit)
             elif insta_drop:
                 falling_tet.insta_drop()
 
         # Lock tet
-        if falling_tet is not None and falling_tet.needs_to_die():
+        if isinstance(falling_tet, Tet) and falling_tet.needs_to_die():
             falling_tet = None
             spawn_next_tet()
 
@@ -773,13 +771,11 @@ while running:
         grid.draw()
 
     # Draw blocks
-    if next_tet is not None:
-        # noinspection PyUnresolvedReferences
+    if isinstance(next_tet, Tet):
         next_tet.draw()
-    if falling_tet_shadow is not None:
-        # noinspection PyUnresolvedReferences
+    if isinstance(falling_tet_shadow, Tet):
         falling_tet_shadow.draw()
-    if falling_tet is not None:
+    if isinstance(falling_tet, Tet):
         falling_tet.draw()
     for block in blocks:
         block.draw()
