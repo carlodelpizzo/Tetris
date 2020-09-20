@@ -280,12 +280,13 @@ class Tet:
             self.correct_below_grid()
 
     def lock_blocks(self):
-        if self.y >= grid.y:
-            for i in range(len(self.body)):
-                blocks.append(self.body[i])
-                blocks[len(blocks) - 1].lock()
-        elif self.y < grid.y:
-            round_over()
+        global end_round
+
+        for i in range(len(self.body)):
+            blocks.append(self.body[i])
+            blocks[len(blocks) - 1].lock()
+            if self.body[i].y <= grid.y - grid.y_unit:
+                end_round = True
 
     def change_block_colors(self, new_color=None):
         if new_color is None:
@@ -464,8 +465,11 @@ def clear_rows():
 
 
 def round_over():
+    global row_state
     global blocks
     global falling_tet
+    global falling_tet_shadow
+    global next_tet
     global round_frame_timer
     global rounds_played_count
     global cleared_blocks_count
@@ -477,7 +481,11 @@ def round_over():
 
     blocks = []
     falling_tet = None
+    falling_tet_shadow = None
+    next_tet = None
     cleared_blocks_count = 0
+    for i in range(len(row_state)):
+        row_state[i] = []
 
     if num_active != 0:
         rounds_played_count += 1
@@ -561,6 +569,7 @@ move_right = False
 allow_spawn = False
 mouse_hold = False
 show_coords = False
+end_round = False
 
 # Timers and counters
 move_delay_timer = 0
@@ -602,41 +611,81 @@ while running:
                 if falling_tet is None:
                     falling_tet = Tet(grid.x + (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2,
                                       grid.y - grid.y_unit * 2, 'TBlock')
+                    next_round_timer = 0
+                elif isinstance(falling_tet, Tet) and isinstance(next_tet, Tet):
+                    next_tet = Tet(grid.right_edge + 15, grid.y, 'TBlock')
+                    next_tet.change_block_colors()
+                    last_spawned_tet[1] = next_tet
             # Spawn JBlock
             if keys[K_j]:
                 if falling_tet is None:
                     falling_tet = Tet(grid.x + (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2,
                                       grid.y - grid.y_unit * 2, 'JBlock')
+                    next_round_timer = 0
+                elif isinstance(falling_tet, Tet) and isinstance(next_tet, Tet):
+                    next_tet = Tet(grid.right_edge + 15, grid.y, 'JBlock')
+                    next_tet.change_block_colors()
+                    last_spawned_tet[1] = next_tet
             # Spawn LBlock
             if keys[K_l]:
                 if falling_tet is None:
                     falling_tet = Tet(grid.x + (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2,
                                       grid.y - grid.y_unit * 2, 'LBlock')
+                    next_round_timer = 0
+                elif isinstance(falling_tet, Tet) and isinstance(next_tet, Tet):
+                    next_tet = Tet(grid.right_edge + 15, grid.y, 'LBlock')
+                    next_tet.change_block_colors()
+                    last_spawned_tet[1] = next_tet
             # Spawn IBlock
             if keys[K_i]:
                 if falling_tet is None:
                     falling_tet = Tet(grid.x + (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2,
                                       grid.y - grid.y_unit * 2, 'IBlock')
+                    next_round_timer = 0
+                elif isinstance(falling_tet, Tet) and isinstance(next_tet, Tet):
+                    next_tet = Tet(grid.right_edge + 15, grid.y, 'IBlock')
+                    next_tet.change_block_colors()
+                    last_spawned_tet[1] = next_tet
             # Spawn OBlock
             if keys[K_o]:
                 if falling_tet is None:
                     falling_tet = Tet(grid.x + (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2,
                                       grid.y - grid.y_unit * 2, 'OBlock')
+                    next_round_timer = 0
+                elif isinstance(falling_tet, Tet) and isinstance(next_tet, Tet):
+                    next_tet = Tet(grid.right_edge + 15, grid.y, 'OBlock')
+                    next_tet.change_block_colors()
+                    last_spawned_tet[1] = next_tet
             # Spawn SBlock
             if keys[K_s]:
                 if falling_tet is None:
                     falling_tet = Tet(grid.x + (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2,
                                       grid.y - grid.y_unit * 2, 'SBlock')
+                    next_round_timer = 0
+                elif isinstance(falling_tet, Tet) and isinstance(next_tet, Tet):
+                    next_tet = Tet(grid.right_edge + 15, grid.y, 'SBlock')
+                    next_tet.change_block_colors()
+                    last_spawned_tet[1] = next_tet
             # Spawn ZBlock
             if keys[K_z]:
                 if falling_tet is None:
                     falling_tet = Tet(grid.x + (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2,
                                       grid.y - grid.y_unit * 2, 'ZBlock')
+                    next_round_timer = 0
+                elif isinstance(falling_tet, Tet) and isinstance(next_tet, Tet):
+                    next_tet = Tet(grid.right_edge + 15, grid.y, 'ZBlock')
+                    next_tet.change_block_colors()
+                    last_spawned_tet[1] = next_tet
             # Spawn single block
             if keys[K_f]:
                 if falling_tet is None:
                     falling_tet = Tet(grid.x + (grid.x_unit * grid.cols) / 2 - grid.x_unit * 2,
                                       grid.y - grid.y_unit * 2)
+                    next_round_timer = 0
+                elif isinstance(falling_tet, Tet) and isinstance(next_tet, Tet):
+                    next_tet = Tet(grid.right_edge + 15, grid.y)
+                    next_tet.change_block_colors()
+                    last_spawned_tet[1] = next_tet
 
             # Generate random block
             if keys[K_SPACE]:
@@ -752,7 +801,8 @@ while running:
         if next_round_timer > 1:
             next_round_timer -= 1
         elif next_round_timer == 1:
-            allow_spawn = True
+            if falling_tet is None:
+                allow_spawn = True
             next_round_timer = 0
 
     # Draw next round timer
@@ -784,6 +834,9 @@ while running:
 
     if not paused:
         round_frame_timer += 1
+        if end_round:
+            end_round = False
+            round_over()
     global_frame_timer += 1
 
     clock.tick(frame_rate)
