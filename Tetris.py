@@ -196,7 +196,7 @@ class Tet:
                     blk.x + x_offset < grid.x:
                 edge = True
                 break
-        if self.check_collide_block(x_mod=x_offset):
+        if self.check_collide(x_mod=x_offset):
             edge = True
         if not edge:
             for blk in self.body:
@@ -204,7 +204,7 @@ class Tet:
             self.x += x_offset
 
     def move_y(self, y_offset):
-        if not self.check_collide_drop():
+        if not self.check_collide(y_mod=grid.y_unit):
             for blk in self.body:
                 blk.y += y_offset
             self.y += y_offset
@@ -222,62 +222,57 @@ class Tet:
         self.x = new_x
         self.y = new_y
 
+    def rotate(self, reverse=False, jump=None):
+        if jump is not None:
+            if 0 <= jump <= len(tet_offsets[self.type]) - 1:
+                for i in range(len(tet_offsets[self.type])):
+                    x_offset = grid.x_unit * tet_offsets[self.type][jump][i][0]
+                    y_offset = grid.y_unit * tet_offsets[self.type][jump][i][1]
+                    self.body[i].x = self.x + x_offset
+                    self.body[i].y = self.y + y_offset
+                self.rotation = jump
+        else:
+            if reverse:
+                if self.rotation - 1 < 0:
+                    self.rotation = len(tet_offsets[self.type]) - 1
+                else:
+                    self.rotation -= 1
+            else:
+                if self.rotation + 1 > len(tet_offsets[self.type]) - 1:
+                    self.rotation = 0
+                else:
+                    self.rotation += 1
+
+            for i in range(len(tet_offsets[self.type])):
+                x_offset = grid.x_unit * tet_offsets[self.type][self.rotation][i][0]
+                y_offset = grid.y_unit * tet_offsets[self.type][self.rotation][i][1]
+                self.body[i].x = self.x + x_offset
+                self.body[i].y = self.y + y_offset
+
+            if self.check_collide():
+                self.rotate(not reverse)
+
+    def draw(self):
+        for blk in self.body:
+            blk.draw()
+
     def insta_drop(self):
-        if self.check_collide_drop():
+        if self.check_collide(y_mod=grid.y_unit):
             return
         else:
             self.move_y(grid.y_unit)
             self.insta_drop()
 
-    def check_collide_drop(self):
+    def check_collide(self, x_mod=0, y_mod=0, grid_check=True, block_check=True):
         for self_blk in self.body:
-            if self_blk.y + grid.y_unit >= grid.bottom:
-                return True
+            if grid_check:
+                if self_blk.y + y_mod >= grid.bottom:
+                    return True
             for blk in blocks:
-                if self_blk is not blk:
-                    if self_blk.y + grid.y_unit == blk.y and self_blk.x == blk.x:
+                if block_check:
+                    if self_blk.x + x_mod == blk.x and self_blk.y + y_mod == blk.y:
                         return True
         return False
-
-    def check_collide_block(self, x_mod=0, y_mod=0):
-        for self_blk in self.body:
-            for blk in blocks:
-                if self_blk.x + x_mod == blk.x and \
-                        self_blk.y + y_mod == blk.y:
-                    return True
-        return False
-
-    def correct_off_grid_x(self):
-        off_screen = None
-        for blk in self.body:
-            if blk.x >= grid.right_edge:
-                off_screen = 'right'
-                break
-            elif blk.x < grid.x:
-                off_screen = 'left'
-                break
-        if off_screen == 'right':
-            self.x -= grid.x_unit
-            for blk in self.body:
-                blk.x -= grid.x_unit
-            self.correct_off_grid_x()
-        elif off_screen == 'left':
-            self.x += grid.x_unit
-            for blk in self.body:
-                blk.x += grid.x_unit
-            self.correct_off_grid_x()
-
-    def correct_below_grid(self):
-        off_screen = False
-        for blk in self.body:
-            if blk.y >= grid.bottom:
-                off_screen = True
-                break
-        if off_screen:
-            self.y -= grid.y_unit
-            for blk in self.body:
-                blk.y -= grid.y_unit
-            self.correct_below_grid()
 
     def lock_blocks(self):
         global end_round
@@ -307,56 +302,19 @@ class Tet:
             for blk in self.body:
                 blk.shadow = False
 
-    def rotate(self, reverse=False, jump=None):
-        if jump is not None:
-            if 0 <= jump <= len(tet_offsets[self.type]) - 1:
-                for i in range(len(tet_offsets[self.type])):
-                    x_offset = grid.x_unit * tet_offsets[self.type][jump][i][0]
-                    y_offset = grid.y_unit * tet_offsets[self.type][jump][i][1]
-                    self.body[i].x = self.x + x_offset
-                    self.body[i].y = self.y + y_offset
-                self.rotation = jump
-        else:
-            if reverse:
-                if self.rotation - 1 < 0:
-                    self.rotation = len(tet_offsets[self.type]) - 1
-                else:
-                    self.rotation -= 1
-            else:
-                if self.rotation + 1 > len(tet_offsets[self.type]) - 1:
-                    self.rotation = 0
-                else:
-                    self.rotation += 1
-
-            for i in range(len(tet_offsets[self.type])):
-                x_offset = grid.x_unit * tet_offsets[self.type][self.rotation][i][0]
-                y_offset = grid.y_unit * tet_offsets[self.type][self.rotation][i][1]
-                self.body[i].x = self.x + x_offset
-                self.body[i].y = self.y + y_offset
-
-            if self.check_collide_block():
-                self.rotate(not reverse)
-
-        self.correct_off_grid_x()
-        self.correct_below_grid()
-
-    def draw(self):
-        for blk in self.body:
-            blk.draw()
-
     def needs_to_die(self):
-        if not self.locked and self.check_collide_drop():
+        if not self.locked and self.check_collide(y_mod=grid.y_unit):
             self.locked = True
             if insta_drop:
                 self.death_timer = int(lock_delay * 1.3)
             else:
                 self.death_timer = lock_delay
-        if self.death_timer > 0 and self.check_collide_drop():
+        if self.death_timer > 0 and self.check_collide(y_mod=grid.y_unit):
             self.death_timer -= 1
-        elif self.death_timer > 0 and not self.check_collide_drop():
+        elif self.death_timer > 0 and not self.check_collide(y_mod=grid.y_unit):
             self.locked = False
             self.death_timer = -1
-        elif self.death_timer == 0 and self.check_collide_drop():
+        elif self.death_timer == 0 and self.check_collide(y_mod=grid.y_unit):
             self.lock_blocks()
             clear_rows()
             return True
@@ -364,8 +322,6 @@ class Tet:
 
 
 def player_move_tet():
-    global falling_tet
-
     if isinstance(falling_tet, Tet):
         if move_left:
             falling_tet.move_x(-grid.x_unit)
