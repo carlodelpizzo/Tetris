@@ -223,7 +223,7 @@ class Tet:
         self.x = new_x
         self.y = new_y
 
-    def rotate(self, reverse=False, jump=None):
+    def rotate(self, reverse=False, jump=None, ignore_checks=False):
         # Jump to specific rotation state. No collision checks
         if jump is not None:
             if 0 <= jump <= len(tet_offsets[self.type]) - 1:
@@ -254,13 +254,14 @@ class Tet:
                 self.body[i].y = self.y + y_offset
 
             # Check for collision. Then check if moving left or right is possible. If not, then undo rotation
-            if self.check_collide():
-                self.new_pos(self.x + grid.x_unit)
-                if self.check_collide():
-                    self.new_pos(self.x - grid.x_unit * 2)
+            if not ignore_checks:
                 if self.check_collide():
                     self.new_pos(self.x + grid.x_unit)
-                    self.rotate(not reverse)
+                    if self.check_collide():
+                        self.new_pos(self.x - grid.x_unit * 2)
+                    if self.check_collide():
+                        self.new_pos(self.x + grid.x_unit)
+                        self.rotate(not reverse)
 
     def draw(self):
         for blk in self.body:
@@ -470,6 +471,33 @@ def round_over():
     next_round_timer = frame_rate * 4
 
 
+def hold_current_tet():
+    global falling_tet
+    global hold_tet
+    global next_tet
+
+    if isinstance(falling_tet, Tet) and isinstance(next_tet, Tet):
+        if hold_tet is None:
+            hold_tet = Tet(grid.right_edge + 15, grid.y + grid.y_unit * 10, falling_tet.type)
+            hold_tet.rotate(jump=falling_tet.rotation)
+            hold_tet.change_block_colors()
+
+            falling_tet = Tet(falling_tet.x, falling_tet.y, next_tet.type)
+
+            next_tet = None
+            generate_tets()
+        elif isinstance(hold_tet, Tet):
+            new_hold = Tet(hold_tet.x, hold_tet.y, falling_tet.type)
+            new_hold.rotation = falling_tet.rotation
+
+            falling_tet = Tet(falling_tet.x, falling_tet.y, hold_tet.type)
+            falling_tet.rotate(jump=hold_tet.rotation)
+
+            hold_tet = Tet(new_hold.x, new_hold.y, new_hold.type)
+            hold_tet.rotate(jump=new_hold.rotation)
+            hold_tet.change_block_colors()
+
+
 # Game clock
 clock = pygame.time.Clock()
 frame_rate = 60
@@ -481,18 +509,19 @@ grid_width = 400
 grid_height = 600
 grid = GameGrid(20, 20, grid_width, grid_height, grid_rows, grid_cols)
 
-# Delays and cool downs
+# Defaults
+default_block_color = white
 fall_cooldown = frame_rate
 lock_delay = frame_rate / 2
 hold_delay = frame_rate / 5
 
-# Game data
-default_block_color = white
+# Game objects
 blocks = []
 last_spawned_tet = ['', '']
 next_tet = None
 falling_tet = None
 falling_tet_shadow = None
+hold_tet = None
 row_state = []
 for row in range(grid.rows):
     row_state.append([])
@@ -663,6 +692,17 @@ while running:
                 allow_spawn = True
                 generate_tets()
 
+            # Hold current block
+            if keys[K_h]:
+                hold_current_tet()
+            # Rotate held block
+            if keys[K_3]:
+                if isinstance(hold_tet, Tet):
+                    hold_tet.rotate(reverse=True, ignore_checks=True)
+            elif keys[K_4]:
+                if isinstance(hold_tet, Tet):
+                    hold_tet.rotate(ignore_checks=True)
+
             # Rotate falling block
             if keys[K_r]:
                 if isinstance(falling_tet, Tet) and not paused:
@@ -671,7 +711,7 @@ while running:
             elif keys[K_e]:
                 if isinstance(falling_tet, Tet) and not paused:
                     if not falling_tet.needs_to_die:
-                        falling_tet.rotate(True)
+                        falling_tet.rotate(reverse=True)
             # Move falling block right
             if keys[K_RIGHT] and not move_right:
                 move_right = True
@@ -801,6 +841,8 @@ while running:
         falling_tet_shadow.draw()
     if isinstance(falling_tet, Tet):
         falling_tet.draw()
+    if isinstance(hold_tet, Tet):
+        hold_tet.draw()
     for block in blocks:
         block.draw()
         if show_coords:
