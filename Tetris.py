@@ -163,8 +163,8 @@ class Block:
             self.color = change
 
     def show_coord(self):
-        coord = small_font.render(str(self.grid_pos), True, black)
-        screen.blit(coord, (self.x + 6, self.y + 6))
+        coord = small_font.render(str(self.grid_pos[0]) + ', ' + str(self.grid_pos[1]), True, black)
+        screen.blit(coord, (self.x + 5, self.y + self.height - 22))
 
 
 class Tet:
@@ -179,6 +179,7 @@ class Tet:
         self.body = []
         self.locked = False
         self.death_timer = -1
+        self.needs_to_die = False
         self.type = kind
         self.color = tet_color
         if kind == '':
@@ -190,26 +191,26 @@ class Tet:
                 self.body.append(Block(self.x + x_offset, self.y + y_offset, self.type))
 
     def move_x(self, x_offset):
-        edge = False
+        # Constrain within grid walls
         for blk in self.body:
-            if blk.x + x_offset >= grid.right_edge or \
-                    blk.x + x_offset < grid.x:
-                edge = True
-                break
-        if self.check_collide(x_mod=x_offset):
-            edge = True
-        if not edge:
-            for blk in self.body:
-                blk.x += x_offset
-            self.x += x_offset
+            if blk.x + x_offset >= grid.right_edge or blk.x + x_offset < grid.x:
+                return
+        # Check for other blocks
+        if self.check_collide(x_mod=x_offset, grid_bottom=False):
+            return
+        # Move blocks
+        for blk in self.body:
+            blk.x += x_offset
+        self.x += x_offset
 
     def move_y(self, y_offset):
-        if not self.check_collide(y_mod=grid.y_unit):
+        if not self.check_collide(y_mod=y_offset):
             for blk in self.body:
                 blk.y += y_offset
             self.y += y_offset
 
     def new_pos(self, new_x=None, new_y=None):
+        # Move with no collision check
         if new_x is None:
             new_x = self.x
         if new_y is None:
@@ -223,6 +224,7 @@ class Tet:
         self.y = new_y
 
     def rotate(self, reverse=False, jump=None):
+        # Jump to specific rotation state. No collision checks
         if jump is not None:
             if 0 <= jump <= len(tet_offsets[self.type]) - 1:
                 for i in range(len(tet_offsets[self.type])):
@@ -231,7 +233,8 @@ class Tet:
                     self.body[i].x = self.x + x_offset
                     self.body[i].y = self.y + y_offset
                 self.rotation = jump
-        else:
+        else:  # If normal rotation
+            # Set new rotation value
             if reverse:
                 if self.rotation - 1 < 0:
                     self.rotation = len(tet_offsets[self.type]) - 1
@@ -243,14 +246,21 @@ class Tet:
                 else:
                     self.rotation += 1
 
+            # Set blocks to new rotation value
             for i in range(len(tet_offsets[self.type])):
                 x_offset = grid.x_unit * tet_offsets[self.type][self.rotation][i][0]
                 y_offset = grid.y_unit * tet_offsets[self.type][self.rotation][i][1]
                 self.body[i].x = self.x + x_offset
                 self.body[i].y = self.y + y_offset
 
+            # Check for collision. Then check if moving left or right is possible. If not, then undo rotation
             if self.check_collide():
-                self.rotate(not reverse)
+                self.new_pos(self.x + grid.x_unit)
+                if self.check_collide():
+                    self.new_pos(self.x - grid.x_unit * 2)
+                if self.check_collide():
+                    self.new_pos(self.x + grid.x_unit)
+                    self.rotate(not reverse)
 
     def draw(self):
         for blk in self.body:
@@ -263,9 +273,12 @@ class Tet:
             self.move_y(grid.y_unit)
             self.insta_drop()
 
-    def check_collide(self, x_mod=0, y_mod=0, grid_check=True, block_check=True):
+    def check_collide(self, x_mod=0, y_mod=0, grid_bottom=True, block_check=True, grid_walls=True):
         for self_blk in self.body:
-            if grid_check:
+            if grid_walls:
+                if not grid.x <= self_blk.x <= grid.right_edge - grid.x_unit:
+                    return True
+            if grid_bottom:
                 if self_blk.y + y_mod >= grid.bottom:
                     return True
             for blk in blocks:
@@ -274,14 +287,32 @@ class Tet:
                         return True
         return False
 
+    def update_state(self):
+        if not self.locked and self.check_collide(y_mod=grid.y_unit):
+            self.locked = True
+            if insta_drop:
+                self.death_timer = int(lock_delay * 1.3)
+            else:
+                self.death_timer = lock_delay
+        if self.death_timer > 0 and self.check_collide(y_mod=grid.y_unit):
+            self.death_timer -= 1
+        elif self.death_timer > 0 and not self.check_collide(y_mod=grid.y_unit):
+            self.locked = False
+            self.death_timer = -1
+        elif self.death_timer == 0 and self.check_collide(y_mod=grid.y_unit):
+            self.lock_blocks()
+            self.needs_to_die = True
+
     def lock_blocks(self):
         global end_round
 
-        for i in range(len(self.body)):
-            blocks.append(self.body[i])
-            blocks[len(blocks) - 1].lock()
-            if self.body[i].y <= grid.y - grid.y_unit:
+        for blk in self.body:
+            if blk.y <= grid.y - grid.y_unit:
                 end_round = True
+            else:
+                blocks.append(blk)
+                blocks[len(blocks) - 1].lock()
+        self.body = []
 
     def change_block_colors(self, new_color=None):
         if new_color is None:
@@ -302,24 +333,6 @@ class Tet:
             for blk in self.body:
                 blk.shadow = False
 
-    def needs_to_die(self):
-        if not self.locked and self.check_collide(y_mod=grid.y_unit):
-            self.locked = True
-            if insta_drop:
-                self.death_timer = int(lock_delay * 1.3)
-            else:
-                self.death_timer = lock_delay
-        if self.death_timer > 0 and self.check_collide(y_mod=grid.y_unit):
-            self.death_timer -= 1
-        elif self.death_timer > 0 and not self.check_collide(y_mod=grid.y_unit):
-            self.locked = False
-            self.death_timer = -1
-        elif self.death_timer == 0 and self.check_collide(y_mod=grid.y_unit):
-            self.lock_blocks()
-            clear_rows()
-            return True
-        return False
-
 
 def player_move_tet():
     if isinstance(falling_tet, Tet):
@@ -329,7 +342,7 @@ def player_move_tet():
             falling_tet.move_x(grid.x_unit)
 
 
-def shadow_tet():
+def make_shadow_tet():
     global falling_tet_shadow
 
     # Create or destroy shadow
@@ -351,7 +364,7 @@ def shadow_tet():
         falling_tet_shadow.insta_drop()
 
 
-def spawn_next_tet(ran_pos=False):
+def generate_tets(ran_pos=False):
     global falling_tet
     global last_spawned_tet
     global next_tet
@@ -360,14 +373,14 @@ def spawn_next_tet(ran_pos=False):
         new_tet = random.choice(list(tet_offsets.keys()))
         # Prevent same block 3 times in a row
         if new_tet == last_spawned_tet[0] and new_tet == last_spawned_tet[1]:
-            spawn_next_tet()
+            generate_tets()
             return
         # 2/3 chance to re-roll if same block as last
         elif new_tet == last_spawned_tet[1]:
             roll = random.randint(0, 2)
             if roll != 0:
                 last_spawned_tet = [last_spawned_tet[1], new_tet]
-                spawn_next_tet()
+                generate_tets()
                 return
 
         next_tet = Tet(grid.right_edge + 15, grid.y, new_tet)
@@ -378,14 +391,14 @@ def spawn_next_tet(ran_pos=False):
         new_tet = random.choice(list(tet_offsets.keys()))
         # Prevent same block 3 times in a row
         if new_tet == last_spawned_tet[0] and new_tet == last_spawned_tet[1]:
-            spawn_next_tet()
+            generate_tets()
             return
         # 2/3 chance to re-roll if same block as last
         elif new_tet == last_spawned_tet[1]:
             roll = random.randint(0, 2)
             if roll != 0:
                 last_spawned_tet = [last_spawned_tet[1], new_tet]
-                spawn_next_tet()
+                generate_tets()
                 return
         if ran_pos:
             ran_x = random.randint(grid.x, grid.x_unit * grid.cols)
@@ -469,7 +482,7 @@ grid_height = 600
 grid = GameGrid(20, 20, grid_width, grid_height, grid_rows, grid_cols)
 
 # Delays and cool downs
-fall_cool_down = frame_rate
+fall_cooldown = frame_rate
 lock_delay = frame_rate / 2
 hold_delay = frame_rate / 5
 
@@ -529,7 +542,7 @@ end_round = False
 
 # Timers and counters
 move_delay_timer = 0
-fall_cool_down_timer = 0
+fall_cooldown_timer = 0
 round_frame_timer = 0
 global_frame_timer = 0
 next_round_timer = 0
@@ -538,6 +551,8 @@ cleared_blocks_count = 0
 
 running = True
 paused = False
+
+generate_tets()
 while running:
     screen.fill(black)
 
@@ -646,15 +661,17 @@ while running:
             # Generate random block
             if keys[K_SPACE]:
                 allow_spawn = True
-                spawn_next_tet()
+                generate_tets()
 
             # Rotate falling block
             if keys[K_r]:
                 if isinstance(falling_tet, Tet) and not paused:
-                    falling_tet.rotate()
+                    if not falling_tet.needs_to_die:
+                        falling_tet.rotate()
             elif keys[K_e]:
                 if isinstance(falling_tet, Tet) and not paused:
-                    falling_tet.rotate(True)
+                    if not falling_tet.needs_to_die:
+                        falling_tet.rotate(True)
             # Move falling block right
             if keys[K_RIGHT] and not move_right:
                 move_right = True
@@ -720,32 +737,27 @@ while running:
         grid.new_pos(mouse_pos[0], mouse_pos[1])
 
     # Game updates
-    shadow_tet()
+    make_shadow_tet()
     if not paused:
-        spawn_next_tet()
         # Clear any rows that are filled
         clear_rows()
 
-        # Tet updates
-        if fall_cool_down_timer == 0:
-            if isinstance(falling_tet, Tet):
-                # Drop tet one grid unit
-                falling_tet.move_y(grid.y_unit)
-            fall_cool_down_timer = fall_cool_down
-        elif fall_cool_down_timer > 0:
-            fall_cool_down_timer -= 1
-
-        # Quick/Insta drop tet
+        # Tet Updates
         if isinstance(falling_tet, Tet):
             if quick_drop:
                 falling_tet.move_y(grid.y_unit)
-            elif insta_drop:
+            elif fall_cooldown_timer == 0:
+                falling_tet.move_y(grid.y_unit)
+            if insta_drop:
                 falling_tet.insta_drop()
 
-        # Lock tet
-        if isinstance(falling_tet, Tet) and falling_tet.needs_to_die():
-            falling_tet = None
-            spawn_next_tet()
+            # Check if need to lock
+            falling_tet.update_state()
+
+            # Kill Tet
+            if falling_tet.needs_to_die:
+                falling_tet = None
+                generate_tets()
 
         # Player movements
         if move_delay_timer == 0:
@@ -760,6 +772,12 @@ while running:
             if falling_tet is None:
                 allow_spawn = True
             next_round_timer = 0
+
+        # Timer for Tet falling
+        if fall_cooldown_timer == 0:
+            fall_cooldown_timer = fall_cooldown
+        elif fall_cooldown_timer > 0:
+            fall_cooldown_timer -= 1
 
     # Draw next round timer
     if next_round_timer > 0:
