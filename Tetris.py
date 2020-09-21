@@ -36,9 +36,6 @@ small_font = pygame.font.SysFont(font_face, 15)
 # Tet information
 tet_colors = {'TBlock': purple, 'JBlock': blue, 'LBlock': orange, 'IBlock': cyan, 'OBlock': yellow,
               'SBlock': green, 'ZBlock': red}
-
-# 'TetType': [[offsets for rotation 0 = (block0), (block1), ... ], [offsets for rotation 1], ... ]]
-# Example: x/y_offset = tet_offsets['TetType'][rotation #][block #][x or y]
 tet_offsets = {
     'TBlock': [[(0, 1), (1, 1), (2, 1), (1, 2)],
                [(1, 0), (1, 1), (1, 2), (0, 1)],
@@ -68,7 +65,6 @@ tet_offsets = {
 }
 
 
-# Need to add collide check on hold swap
 class GameGrid:
     def __init__(self, x, y, width, height, rows, cols=10):
         self.x = int(x)
@@ -189,8 +185,8 @@ class GameGrid:
 
         # Draw next round timer
         if self.next_round_timer > 0:
-            next_game = main_font.render(str(self.next_round_timer), True, white)
-            screen.blit(next_game, (self.x + 5, self.y + 5))
+            next_game_txt = main_font.render(str(self.next_round_timer), True, white)
+            screen.blit(next_game_txt, (self.x + 5, self.y + 5))
 
         # Draw num of rows cleared
         rows_cleared_txt = main_font.render(str(int(self.cleared / self.cols)) + ' cleared rows', True, white)
@@ -334,7 +330,7 @@ class GameGrid:
         if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
             if self.held_tet is None:
                 self.held_tet = Tet(self, self.right_edge + 15, self.y + self.y_unit * 10, self.faller.type)
-                self.held_tet.rotate(jump=self.faller.rotation)
+                self.held_tet.rotate(self, jump=self.faller.rotation)
                 self.held_tet.change_block_colors()
 
                 self.faller = Tet(self, self.faller.x, self.faller.y, self.next_tet.type)
@@ -346,10 +342,11 @@ class GameGrid:
                 new_hold.rotation = self.faller.rotation
 
                 self.faller = Tet(self, self.faller.x, self.faller.y, self.held_tet.type)
-                self.faller.rotate(jump=self.held_tet.rotation)
+                self.faller.rotate(self, jump=self.held_tet.rotation)
+                self.faller.correct_off_grid()
 
                 self.held_tet = Tet(self, new_hold.x, new_hold.y, new_hold.type)
-                self.held_tet.rotate(jump=new_hold.rotation)
+                self.held_tet.rotate(self, jump=new_hold.rotation)
                 self.held_tet.change_block_colors()
 
     def cast_shadow(self):
@@ -368,7 +365,7 @@ class GameGrid:
 
             # Match rotation
             if self.faller.rotation != self.shadow.rotation:
-                self.shadow.rotate(jump=self.faller.rotation)
+                self.shadow.rotate(self, jump=self.faller.rotation)
 
             self.shadow.insta_drop(self)
 
@@ -402,14 +399,14 @@ class GameGrid:
     def play(self):
         self.generate_tets()
         self.cast_shadow()
-        if not game_grid.paused:
+        if not self.paused:
             self.move_tet()
             self.lock_blocks()
             self.clear_rows()
             self.drop_blocks()
 
         # Draw grid
-        if game_grid.paused:
+        if self.paused:
             self.draw(pink)
         else:
             self.draw()
@@ -527,7 +524,7 @@ class Tet:
         self.x = new_x
         self.y = new_y
 
-    def rotate(self, reverse=False, jump=None, ignore_checks=False):
+    def rotate(self, grid: GameGrid, reverse=False, jump=None, ignore_checks=False):
         # Jump to specific rotation state. No collision checks
         if jump is not None:
             if 0 <= jump <= len(tet_offsets[self.type]) - 1:
@@ -557,15 +554,16 @@ class Tet:
                 self.body[i].x = self.x + x_offset
                 self.body[i].y = self.y + y_offset
 
+            self.correct_off_grid()
             # Check for collision. Then check if moving left or right is possible. If not, then undo rotation
             if not ignore_checks:
-                if self.check_grid_collide():
+                if self.check_collide(grid, bottom=False):
                     self.new_pos(self.x + self.x_unit)
-                    if self.check_grid_collide():
+                    if self.check_collide(grid, bottom=False):
                         self.new_pos(self.x - self.x_unit * 2)
-                    if self.check_grid_collide():
+                    if self.check_collide(grid, bottom=False):
                         self.new_pos(self.x + self.x_unit)
-                        self.rotate(not reverse)
+                        self.rotate(grid, not reverse)
 
     def draw(self):
         for blk in self.body:
@@ -647,6 +645,34 @@ class Tet:
         self.change_block_colors()
         for blk in self.body:
             blk.shadow = True
+
+    def correct_off_grid(self):
+        off_screen = None
+        for blk in self.body:
+            if blk.x >= self.right_edge:
+                off_screen = 'right'
+                break
+            elif blk.x < self.grid_x:
+                off_screen = 'left'
+                break
+            elif blk.y >= self.bottom:
+                off_screen = 'bottom'
+                break
+        if off_screen == 'right':
+            self.x -= self.x_unit
+            for blk in self.body:
+                blk.x -= self.x_unit
+            self.correct_off_grid()
+        elif off_screen == 'left':
+            self.x += self.x_unit
+            for blk in self.body:
+                blk.x += self.x_unit
+            self.correct_off_grid()
+        elif off_screen == 'bottom':
+            self.y -= self.y_unit
+            for blk in self.body:
+                blk.y -= self.y_unit
+            self.correct_off_grid()
 
 
 # Game grid
@@ -783,20 +809,20 @@ while running:
             # Rotate held block
             if keys[K_3]:
                 if isinstance(game_grid.held_tet, Tet):
-                    game_grid.held_tet.rotate(reverse=True, ignore_checks=True)
+                    game_grid.held_tet.rotate(game_grid, reverse=True, ignore_checks=True)
             elif keys[K_4]:
                 if isinstance(game_grid.held_tet, Tet):
-                    game_grid.held_tet.rotate(ignore_checks=True)
+                    game_grid.held_tet.rotate(game_grid, ignore_checks=True)
 
             # Rotate falling block
             if keys[K_r]:
                 if isinstance(game_grid.faller, Tet) and not game_grid.paused:
                     if not game_grid.faller.needs_to_die:
-                        game_grid.faller.rotate()
+                        game_grid.faller.rotate(game_grid)
             elif keys[K_e]:
                 if isinstance(game_grid.faller, Tet) and not game_grid.paused:
                     if not game_grid.faller.needs_to_die:
-                        game_grid.faller.rotate(reverse=True)
+                        game_grid.faller.rotate(game_grid, reverse=True)
             # Move falling block right
             if keys[K_RIGHT] and not game_grid.move_right:
                 game_grid.move_right = True
