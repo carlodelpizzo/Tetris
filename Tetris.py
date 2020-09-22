@@ -601,23 +601,6 @@ class Tet:
             self.move_y(grid, self.y_unit)
             self.insta_drop(grid)
 
-    def check_grid_collide(self, x_mod=0, y_mod=0, bottom=True, walls=True):
-        for blk in self.body:
-            if walls:
-                if not self.grid_x <= blk.x + x_mod <= self.right_edge - self.x_unit:
-                    return True
-            if bottom:
-                if blk.y + y_mod >= self.bottom:
-                    return True
-        return False
-
-    def check_block_collide(self, grid: GameGrid, x_mod=0, y_mod=0):
-        for blk in self.body:
-            for grid_blk in grid.blocks:
-                if blk.x + x_mod == grid_blk.x and blk.y + y_mod == grid_blk.y:
-                    return True
-        return False
-
     def check_collide(self, grid: GameGrid, x_mod=0, y_mod=0, bottom=True):
         for blk in self.body:
             if not self.grid_x <= blk.x + x_mod <= self.right_edge - self.x_unit:
