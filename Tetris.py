@@ -294,7 +294,7 @@ class GameGrid:
         to_kill.sort(reverse=True)
         for i in range(len(to_kill)):
             self.blocks.pop(to_kill[i])
-        self.score += 100 * lines_cleared * lines_cleared
+        self.score += self.cols * 10 * lines_cleared * lines_cleared
 
     def start_round(self):
         self.rounds += 1
@@ -372,12 +372,16 @@ class GameGrid:
             self.faller.new_pos(self.x + ran_x, self.y + -self.y_unit * 4)
             self.last_spawned = [self.last_spawned[1], new_tet]
 
-    def hold_tet(self):
+    def hold_swap_tet(self):
         if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
             # Hold falling Tet if not currently holding
             if self.held_tet is None:
                 self.held_tet = Tet(self, self.right_edge + 15, self.y + self.y_unit * 10, self.faller.type)
                 self.held_tet.rotate(self, jump=self.faller.rotation, ignore_checks=True)
+                if self.faller.death_timer != -1:
+                    self.held_tet.death_timer = int(self.faller.death_timer)
+                if self.faller.locked:
+                    self.held_tet.locked = True
                 self.held_tet.change_block_colors()
 
                 self.faller = Tet(self, self.faller.x, self.faller.y, self.next_tet.type)
@@ -386,16 +390,28 @@ class GameGrid:
                 self.generate_tets()
             # Swap falling Tet
             elif isinstance(self.held_tet, Tet):
-                new_hold = Tet(self, self.held_tet.x, self.held_tet.y, self.faller.type)
-                new_hold.rotation = self.faller.rotation
+                new_held = Tet(self, self.held_tet.x, self.held_tet.y, self.faller.type)
+                new_held.rotation = self.faller.rotation
+                if self.faller.death_timer != -1:
+                    new_held.death_timer = int(self.faller.death_timer)
+                if self.faller.locked:
+                    new_held.locked = True
 
                 self.faller = Tet(self, self.faller.x, self.faller.y, self.held_tet.type)
                 self.faller.rotate(self, jump=self.held_tet.rotation)
                 self.faller.correct_off_grid()
+                if self.held_tet.death_timer != -1:
+                    self.faller.death_timer = int(self.held_tet.death_timer)
+                if self.held_tet.locked:
+                    self.faller.locked = True
 
-                self.held_tet = Tet(self, new_hold.x, new_hold.y, new_hold.type)
-                self.held_tet.rotate(self, jump=new_hold.rotation, ignore_checks=True)
+                self.held_tet = Tet(self, new_held.x, new_held.y, new_held.type)
+                self.held_tet.rotate(self, jump=new_held.rotation, ignore_checks=True)
                 self.held_tet.change_block_colors()
+                if new_held.death_timer != -1:
+                    self.held_tet.death_timer = new_held.death_timer
+                if new_held.locked:
+                    self.held_tet.locked = True
 
     def cast_shadow(self):
         # Create or destroy shadow
@@ -593,7 +609,7 @@ class GameGrid:
         if not self.paused:
             # Hold current block
             if keys[K_h]:
-                self.hold_tet()
+                self.hold_swap_tet()
             # Rotate held block
             if keys[K_3]:
                 if isinstance(self.held_tet, Tet):
@@ -903,7 +919,7 @@ grid_rows = 19
 grid_cols = 10
 grid_width = 400
 grid_height = 600
-game_grid = GameGrid(20, 20, grid_width, grid_height, grid_rows, grid_cols, lock_aspect='height')
+game_grid = GameGrid(60, 60, grid_width, grid_height, grid_rows, grid_cols, lock_aspect='height')
 
 mouse_hold = False
 
