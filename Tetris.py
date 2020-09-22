@@ -67,14 +67,24 @@ tet_offsets = {
 
 
 class GameGrid:
-    def __init__(self, x, y, width, height, rows=15, cols=10):
+    def __init__(self, x, y, width, height, rows=15, cols=10, lock_aspect=''):
+        # Lock aspect and preserve width
+        if lock_aspect == 'width':
+            self.x_unit = int(width / cols)
+            self.y_unit = self.x_unit
+        # Lock aspect and preserve height
+        elif lock_aspect == 'height':
+            self.y_unit = int(height / rows)
+            self.x_unit = self.y_unit
+        else:
+            self.x_unit = int(width / cols)
+            self.y_unit = int(height / rows)
+
         self.on = True
         self.x = int(x)
         self.y = int(y)
         self.rows = int(rows)
         self.cols = int(cols)
-        self.x_unit = int(width / cols)
-        self.y_unit = int(height / rows)
         self.width = self.x_unit * self.cols
         self.height = self.y_unit * self.rows
         self.right_edge = self.x + self.width
@@ -104,6 +114,9 @@ class GameGrid:
         self.default_block_color = white
         self.lock_delay = frame_rate / 2
         self.hold_delay = frame_rate / 5
+        self.pressed_keys = []
+        for i in range(323):
+            self.pressed_keys.append(0)
 
     def new_pos(self, new_x, new_y):
         x_offset = new_x - self.x
@@ -134,7 +147,7 @@ class GameGrid:
             self.next_tet.right_edge = self.right_edge
             self.next_tet.bottom = self.bottom
         if isinstance(self.held_tet, Tet):
-            self.held_tet.new_pos(self.next_tet.x + x_offset, self.next_tet.y + y_offset)
+            self.held_tet.new_pos(self.held_tet.x + x_offset, self.held_tet.y + y_offset)
             self.held_tet.grid_x = self.x
             self.held_tet.grid_y = self.y
             self.held_tet.right_edge = self.right_edge
@@ -437,6 +450,194 @@ class GameGrid:
         else:
             self.on = True
 
+    def key_down(self, keys):
+        keys = list(keys)
+        for i in range(len(keys)):
+            if self.pressed_keys[i] == keys[i]:
+                keys[i] = 0
+            else:
+                self.pressed_keys[i] = keys[i]
+
+        # Test
+        if keys[K_q]:
+            self.toggle_on()
+        if keys[K_w]:
+            self.start_round()
+
+        # Spawn TBlock
+        if keys[K_t]:
+            if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
+                self.next_tet = Tet(self, self.right_edge + 15, self.y, 'TBlock')
+                self.next_tet.change_block_colors()
+                self.last_spawned[1] = self.next_tet.type
+            else:
+                self.faller = Tet(self, self.x + (self.x_unit * self.cols) / 2 - self.x_unit * 2,
+                                  self.y - self.y_unit * 2, 'TBlock')
+                self.faller.dev = True
+                self.next_round_timer = 0
+        # Spawn JBlock
+        if keys[K_j]:
+            if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
+                self.next_tet = Tet(self, self.right_edge + 15, self.y, 'JBlock')
+                self.next_tet.change_block_colors()
+                self.last_spawned[1] = self.next_tet.type
+            else:
+                self.faller = Tet(self, self.x + (self.x_unit * self.cols) / 2 - self.x_unit * 2,
+                                  self.y - self.y_unit * 2, 'JBlock')
+                self.faller.dev = True
+                self.next_round_timer = 0
+        # Spawn LBlock
+        if keys[K_l]:
+            if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
+                self.next_tet = Tet(self, self.right_edge + 15, self.y, 'LBlock')
+                self.next_tet.change_block_colors()
+                self.last_spawned[1] = self.next_tet.type
+            else:
+                self.faller = Tet(self, self.x + (self.x_unit * self.cols) / 2 - self.x_unit * 2,
+                                  self.y - self.y_unit * 2, 'LBlock')
+                self.faller.dev = True
+                self.next_round_timer = 0
+        # Spawn IBlock
+        if keys[K_i]:
+            if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
+                self.next_tet = Tet(self, self.right_edge + 15, self.y, 'IBlock')
+                self.next_tet.change_block_colors()
+                self.last_spawned[1] = self.next_tet.type
+            else:
+                self.faller = Tet(self, self.x + (self.x_unit * self.cols) / 2 - self.x_unit * 2,
+                                  self.y - self.y_unit * 2, 'IBlock')
+                self.faller.dev = True
+                self.next_round_timer = 0
+        # Spawn OBlock
+        if keys[K_o]:
+            if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
+                self.next_tet = Tet(self, self.right_edge + 15, self.y, 'OBlock')
+                self.next_tet.change_block_colors()
+                self.last_spawned[1] = self.next_tet.type
+            else:
+                self.faller = Tet(self, self.x + (self.x_unit * self.cols) / 2 - self.x_unit * 2,
+                                  self.y - self.y_unit * 2, 'OBlock')
+                self.faller.dev = True
+                self.next_round_timer = 0
+        # Spawn SBlock
+        if keys[K_s]:
+            if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
+                self.next_tet = Tet(self, self.right_edge + 15, self.y, 'SBlock')
+                self.next_tet.change_block_colors()
+                self.last_spawned[1] = self.next_tet.type
+            else:
+                self.faller = Tet(self, self.x + (self.x_unit * self.cols) / 2 - self.x_unit * 2,
+                                  self.y - self.y_unit * 2, 'SBlock')
+                self.faller.dev = True
+                self.next_round_timer = 0
+        # Spawn ZBlock
+        if keys[K_z]:
+            if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
+                self.next_tet = Tet(self, self.right_edge + 15, self.y, 'ZBlock')
+                self.next_tet.change_block_colors()
+                self.last_spawned[1] = self.next_tet.type
+            else:
+                self.faller = Tet(self, self.x + (self.x_unit * self.cols) / 2 - self.x_unit * 2,
+                                  self.y - self.y_unit * 2, 'ZBlock')
+                self.faller.dev = True
+                self.next_round_timer = 0
+        # Spawn single block
+        if keys[K_f]:
+            if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
+                self.next_tet = Tet(self, self.right_edge + 15, self.y)
+                self.next_tet.change_block_colors()
+                self.last_spawned[1] = self.next_tet.type
+            else:
+                self.faller = Tet(self, self.x + (self.x_unit * self.cols) / 2 - self.x_unit * 2,
+                                  self.y - self.y_unit * 2)
+                self.faller.dev = True
+                self.next_round_timer = 0
+
+        # Show block coords
+        if keys[K_x] and not self.show_coords:
+            self.show_coords = True
+        elif keys[K_x] and self.show_coords:
+            self.show_coords = False
+
+        # Start game / pause
+        if keys[K_SPACE]:
+            if self.faller is None and self.rounds == 0:
+                self.start_round()
+            else:
+                if self.paused:
+                    self.paused = False
+                else:
+                    self.paused = True
+
+        # Pause
+        if keys[K_p] and not self.paused:
+            self.paused = True
+        elif keys[K_p] and self.paused:
+            self.paused = False
+
+        # Player inputs
+        if not self.paused:
+            # Hold current block
+            if keys[K_h]:
+                self.hold_tet()
+            # Rotate held block
+            if keys[K_3]:
+                if isinstance(self.held_tet, Tet):
+                    self.held_tet.rotate(self, reverse=True, ignore_checks=True)
+            elif keys[K_4]:
+                if isinstance(self.held_tet, Tet):
+                    self.held_tet.rotate(self, ignore_checks=True)
+
+            # Rotate falling block
+            if keys[K_r]:
+                if isinstance(self.faller, Tet):
+                    if not self.faller.needs_to_die:
+                        self.faller.rotate(self)
+            elif keys[K_e]:
+                if isinstance(self.faller, Tet):
+                    if not self.faller.needs_to_die:
+                        self.faller.rotate(self, reverse=True)
+            # Move falling block right
+            if keys[K_RIGHT] and not self.move_right:
+                self.move_right = True
+                if not self.paused:
+                    self.player_move_faller()
+                    self.move_delay_timer = self.hold_delay
+            # Move falling block left
+            if keys[K_LEFT] and not self.move_left:
+                self.move_left = True
+                if not self.paused:
+                    self.player_move_faller()
+                    self.move_delay_timer = self.hold_delay
+            # Turn on quick drop
+            if keys[K_DOWN] and not self.quick_drop:
+                self.quick_drop = True
+            # Turn on insta drop
+            if keys[K_UP] and isinstance(self.faller, Tet):
+                self.faller.insta_drop(self)
+
+    def key_up(self, keys):
+        keys = list(keys)
+        keys_up = []
+        for i in range(len(keys)):
+            keys_up.append(0)
+        for i in range(len(keys)):
+            if self.pressed_keys[i] > keys[i]:
+                self.pressed_keys[i] = 0
+                keys_up[i] = 1
+
+        # Turn off quick drop
+        if keys_up[K_DOWN] and self.quick_drop:
+            self.quick_drop = False
+        # Stop move falling block right
+        if keys_up[K_RIGHT] and self.move_right:
+            self.move_delay_timer = 0
+            self.move_right = False
+        # Stop move falling block left
+        if keys_up[K_LEFT] and self.move_left:
+            self.move_delay_timer = 0
+            self.move_left = False
+
 
 class Block:
     def __init__(self, grid: GameGrid, x, y, tet_type=''):
@@ -683,11 +884,11 @@ class Tet:
 
 
 # Game grid
-grid_rows = 15
+grid_rows = 19
 grid_cols = 10
 grid_width = 400
 grid_height = 600
-game_grid = GameGrid(20, 20, grid_width, grid_height, grid_rows, grid_cols)
+game_grid = GameGrid(20, 20, grid_width, grid_height, grid_rows, grid_cols, lock_aspect='height')
 
 mouse_hold = False
 
@@ -697,198 +898,27 @@ while running:
 
     # Event loop
     for event in pygame.event.get():
+        keys_list = pygame.key.get_pressed()
+
         # Press close button
         if event.type == pygame.QUIT:
             running = False
             break
 
         # Key down events
-        keys = pygame.key.get_pressed()
         if event.type == pygame.KEYDOWN:
-            # Test
-            if keys[K_q]:
-                game_grid.toggle_on()
-            if keys[K_w]:
-                game_grid.start_round()
-
             # Close window shortcut
-            if (keys[K_LCTRL] or keys[K_RCTRL]) and keys[K_w]:
+            if (keys_list[K_LCTRL] or keys_list[K_RCTRL]) and keys_list[K_w]:
                 running = False
                 break
 
-            # Spawn TBlock
-            if keys[K_t]:
-                if isinstance(game_grid.faller, Tet) and isinstance(game_grid.next_tet, Tet):
-                    game_grid.next_tet = Tet(game_grid, game_grid.right_edge + 15, game_grid.y, 'TBlock')
-                    game_grid.next_tet.change_block_colors()
-                    game_grid.last_spawned[1] = game_grid.next_tet.type
-                else:
-                    game_grid.faller = Tet(game_grid,
-                                           game_grid.x + (game_grid.x_unit * game_grid.cols) / 2 - game_grid.x_unit * 2,
-                                           game_grid.y - game_grid.y_unit * 2, 'TBlock')
-                    game_grid.faller.dev = True
-                    next_round_timer = 0
-            # Spawn JBlock
-            if keys[K_j]:
-                if isinstance(game_grid.faller, Tet) and isinstance(game_grid.next_tet, Tet):
-                    game_grid.next_tet = Tet(game_grid, game_grid.right_edge + 15, game_grid.y, 'JBlock')
-                    game_grid.next_tet.change_block_colors()
-                    game_grid.last_spawned[1] = game_grid.next_tet.type
-                else:
-                    game_grid.faller = Tet(game_grid,
-                                           game_grid.x + (game_grid.x_unit * game_grid.cols) / 2 - game_grid.x_unit * 2,
-                                           game_grid.y - game_grid.y_unit * 2, 'JBlock')
-                    game_grid.faller.dev = True
-                    next_round_timer = 0
-            # Spawn LBlock
-            if keys[K_l]:
-                if isinstance(game_grid.faller, Tet) and isinstance(game_grid.next_tet, Tet):
-                    game_grid.next_tet = Tet(game_grid, game_grid.right_edge + 15, game_grid.y, 'LBlock')
-                    game_grid.next_tet.change_block_colors()
-                    game_grid.last_spawned[1] = game_grid.next_tet.type
-                else:
-                    game_grid.faller = Tet(game_grid,
-                                           game_grid.x + (game_grid.x_unit * game_grid.cols) / 2 - game_grid.x_unit * 2,
-                                           game_grid.y - game_grid.y_unit * 2, 'LBlock')
-                    game_grid.faller.dev = True
-                    next_round_timer = 0
-            # Spawn IBlock
-            if keys[K_i]:
-                if isinstance(game_grid.faller, Tet) and isinstance(game_grid.next_tet, Tet):
-                    game_grid.next_tet = Tet(game_grid, game_grid.right_edge + 15, game_grid.y, 'IBlock')
-                    game_grid.next_tet.change_block_colors()
-                    game_grid.last_spawned[1] = game_grid.next_tet.type
-                else:
-                    game_grid.faller = Tet(game_grid,
-                                           game_grid.x + (game_grid.x_unit * game_grid.cols) / 2 - game_grid.x_unit * 2,
-                                           game_grid.y - game_grid.y_unit * 2, 'IBlock')
-                    game_grid.faller.dev = True
-                    next_round_timer = 0
-            # Spawn OBlock
-            if keys[K_o]:
-                if isinstance(game_grid.faller, Tet) and isinstance(game_grid.next_tet, Tet):
-                    game_grid.next_tet = Tet(game_grid, game_grid.right_edge + 15, game_grid.y, 'OBlock')
-                    game_grid.next_tet.change_block_colors()
-                    game_grid.last_spawned[1] = game_grid.next_tet.type
-                else:
-                    game_grid.faller = Tet(game_grid,
-                                           game_grid.x + (game_grid.x_unit * game_grid.cols) / 2 - game_grid.x_unit * 2,
-                                           game_grid.y - game_grid.y_unit * 2, 'OBlock')
-                    game_grid.faller.dev = True
-                    next_round_timer = 0
-            # Spawn SBlock
-            if keys[K_s]:
-                if isinstance(game_grid.faller, Tet) and isinstance(game_grid.next_tet, Tet):
-                    game_grid.next_tet = Tet(game_grid, game_grid.right_edge + 15, game_grid.y, 'SBlock')
-                    game_grid.next_tet.change_block_colors()
-                    game_grid.last_spawned[1] = game_grid.next_tet.type
-                else:
-                    game_grid.faller = Tet(game_grid,
-                                           game_grid.x + (game_grid.x_unit * game_grid.cols) / 2 - game_grid.x_unit * 2,
-                                           game_grid.y - game_grid.y_unit * 2, 'SBlock')
-                    game_grid.faller.dev = True
-                    next_round_timer = 0
-            # Spawn ZBlock
-            if keys[K_z]:
-                if isinstance(game_grid.faller, Tet) and isinstance(game_grid.next_tet, Tet):
-                    game_grid.next_tet = Tet(game_grid, game_grid.right_edge + 15, game_grid.y, 'ZBlock')
-                    game_grid.next_tet.change_block_colors()
-                    game_grid.last_spawned[1] = game_grid.next_tet.type
-                else:
-                    game_grid.faller = Tet(game_grid,
-                                           game_grid.x + (game_grid.x_unit * game_grid.cols) / 2 - game_grid.x_unit * 2,
-                                           game_grid.y - game_grid.y_unit * 2, 'ZBlock')
-                    game_grid.faller.dev = True
-                    next_round_timer = 0
-            # Spawn single block
-            if keys[K_f]:
-                if isinstance(game_grid.faller, Tet) and isinstance(game_grid.next_tet, Tet):
-                    game_grid.next_tet = Tet(game_grid, game_grid.right_edge + 15, game_grid.y)
-                    game_grid.next_tet.change_block_colors()
-                    game_grid.last_spawned[1] = game_grid.next_tet.type
-                else:
-                    game_grid.faller = Tet(game_grid,
-                                           game_grid.x + (game_grid.x_unit * game_grid.cols) / 2 - game_grid.x_unit * 2,
-                                           game_grid.y - game_grid.y_unit * 2)
-                    game_grid.faller.dev = True
-                    next_round_timer = 0
-
-            # Show block coords
-            if keys[K_x] and not game_grid.show_coords:
-                game_grid.show_coords = True
-            elif keys[K_x] and game_grid.show_coords:
-                game_grid.show_coords = False
-
-            # Start game / pause
-            if keys[K_SPACE]:
-                if game_grid.faller is None and game_grid.rounds == 0:
-                    game_grid.start_round()
-                else:
-                    if game_grid.paused:
-                        game_grid.paused = False
-                    else:
-                        game_grid.paused = True
-
-            # Pause
-            if keys[K_p] and not game_grid.paused:
-                game_grid.paused = True
-            elif keys[K_p] and game_grid.paused:
-                game_grid.paused = False
-
-            # Player inputs
-            if not game_grid.paused:
-                # Hold current block
-                if keys[K_h]:
-                    game_grid.hold_tet()
-                # Rotate held block
-                if keys[K_3]:
-                    if isinstance(game_grid.held_tet, Tet):
-                        game_grid.held_tet.rotate(game_grid, reverse=True, ignore_checks=True)
-                elif keys[K_4]:
-                    if isinstance(game_grid.held_tet, Tet):
-                        game_grid.held_tet.rotate(game_grid, ignore_checks=True)
-
-                # Rotate falling block
-                if keys[K_r]:
-                    if isinstance(game_grid.faller, Tet):
-                        if not game_grid.faller.needs_to_die:
-                            game_grid.faller.rotate(game_grid)
-                elif keys[K_e]:
-                    if isinstance(game_grid.faller, Tet):
-                        if not game_grid.faller.needs_to_die:
-                            game_grid.faller.rotate(game_grid, reverse=True)
-                # Move falling block right
-                if keys[K_RIGHT] and not game_grid.move_right:
-                    game_grid.move_right = True
-                    if not game_grid.paused:
-                        game_grid.player_move_faller()
-                        game_grid.move_delay_timer = game_grid.hold_delay
-                # Move falling block left
-                if keys[K_LEFT] and not game_grid.move_left:
-                    game_grid.move_left = True
-                    if not game_grid.paused:
-                        game_grid.player_move_faller()
-                        game_grid.move_delay_timer = game_grid.hold_delay
-                # Turn on quick drop
-                if keys[K_DOWN] and not game_grid.quick_drop:
-                    game_grid.quick_drop = True
-                # Turn on insta drop
-                if keys[K_UP] and isinstance(game_grid.faller, Tet):
-                    game_grid.faller.insta_drop(game_grid)
+            # Send inputs to game_grid
+            game_grid.key_down(keys_list)
 
         # Key up events
         if event.type == pygame.KEYUP:
-            # Turn off quick drop
-            if not keys[K_DOWN] and game_grid.quick_drop:
-                game_grid.quick_drop = False
-            # Stop move falling block right
-            if not keys[K_RIGHT] and game_grid.move_right:
-                game_grid.move_delay_timer = 0
-                game_grid.move_right = False
-            # Stop move falling block left
-            if not keys[K_LEFT] and game_grid.move_left:
-                game_grid.move_delay_timer = 0
-                game_grid.move_left = False
+            # Update pressed keys in game_grid
+            game_grid.key_up(keys_list)
 
         # Mouse down event
         if event.type == pygame.MOUSEBUTTONDOWN:
