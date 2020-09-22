@@ -99,6 +99,7 @@ class GameGrid:
         self.next_tet = None
         self.held_tet = None
         self.last_spawned = ['', '']
+        self.score = 0
         self.cleared = 0
         self.rounds = 0
         self.round_time = 0
@@ -203,8 +204,16 @@ class GameGrid:
             screen.blit(next_game_txt, (self.x + 5, self.y + 5))
 
         # Draw num of rows cleared
-        rows_cleared_txt = main_font.render(str(int(self.cleared / self.cols)) + ' cleared rows', True, white)
+        if int(self.cleared / self.cols) == 1:
+            s_vs_no_s = ' Cleared Row'
+        else:
+            s_vs_no_s = ' Cleared Rows'
+        rows_cleared_txt = main_font.render(str(int(self.cleared / self.cols)) + s_vs_no_s, True, white)
         screen.blit(rows_cleared_txt, (self.right_edge + 20, self.y + self.y_unit * 5))
+
+        # Draw score
+        score_txt = main_font.render('Score: ' + str(self.score), True, white)
+        screen.blit(score_txt, (self.right_edge + 20, self.y + self.y_unit * 6))
 
         # PAUSED
         if self.paused:
@@ -269,8 +278,10 @@ class GameGrid:
                 self.cleared += 1
 
     def clear_rows(self):
+        lines_cleared = 0
         for r in range(len(self.row_state)):
             if len(self.row_state[r]) >= self.cols:
+                lines_cleared += 1
                 self.row_state[r] = []
                 for blk in self.blocks:
                     if blk.grid_pos[0] == r:
@@ -283,6 +294,7 @@ class GameGrid:
         to_kill.sort(reverse=True)
         for i in range(len(to_kill)):
             self.blocks.pop(to_kill[i])
+        self.score += 100 * lines_cleared * lines_cleared
 
     def start_round(self):
         self.rounds += 1
@@ -293,23 +305,25 @@ class GameGrid:
         num_active = int(len(self.blocks))
         num_clear = int(self.cleared / self.cols)
 
+        if num_active != 0:
+            print('############################################################################')
+            print('')
+            print('cleared rows: ' + str(num_clear) + ', active blocks: ' + str(num_active) +
+                  ', round frames: ' + str(self.round_time) + ', round: ' + str(self.rounds) +
+                  ', score: ' + str(self.score))
+            print('')
+            print('############################################################################')
+
         self.blocks = []
         self.faller = None
         self.shadow = None
         self.next_tet = None
         self.held_tet = None
+        self.score = 0
+        self.round_time = 0
         self.cleared = 0
         for i in range(len(self.row_state)):
             self.row_state[i] = []
-
-        if num_active != 0:
-            print('######################################################################')
-            print('')
-            print('cleared rows: ' + str(num_clear) + ', active blocks: ' + str(num_active) +
-                  ', round frames: ' + str(self.round_time) + ', round: ' + str(self.rounds))
-            print('')
-            print('#######################################################################')
-        self.round_time = 0
         self.next_round_timer = frame_rate * 4
 
     def generate_tets(self, ran_pos=False):
@@ -838,6 +852,7 @@ class Tet:
             else:
                 grid.blocks.append(blk)
                 grid.blocks[len(grid.blocks) - 1].lock()
+                grid.score += 5
         self.body = []
 
     def change_block_colors(self, new_color=None):
