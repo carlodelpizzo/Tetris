@@ -27,12 +27,11 @@ purple = [128, 0, 128]
 pink = [255, 192, 203]
 grid_color = [50, 50, 50]
 
-# Font
-font_size = 25
-font_face = "Helvetica"
-main_font = pygame.font.SysFont(font_face, font_size)
-small_font = pygame.font.SysFont(font_face, 15)
-big_font = pygame.font.SysFont(font_face, 80)
+# Fonts
+default_font = 'Helvetica'
+main_font = pygame.font.SysFont(default_font, 25)
+small_font = pygame.font.SysFont(default_font, 15)
+big_font = pygame.font.SysFont(default_font, 80)
 
 # Tet information
 tet_colors = {'TBlock': purple, 'JBlock': blue, 'LBlock': orange, 'IBlock': cyan, 'OBlock': yellow,
@@ -67,7 +66,7 @@ tet_offsets = {
 
 
 class GameGrid:
-    def __init__(self, x, y, width, height, rows=15, cols=10, lock_aspect=''):
+    def __init__(self, x: int, y: int, width: int, height: int, rows=15, cols=10, lock_aspect=''):
         # Lock aspect and preserve width
         if lock_aspect == 'width':
             self.x_unit = int(width / cols)
@@ -80,11 +79,11 @@ class GameGrid:
             self.x_unit = int(width / cols)
             self.y_unit = int(height / rows)
 
-        self.on = True
-        self.x = int(x)
-        self.y = int(y)
-        self.rows = int(rows)
-        self.cols = int(cols)
+        self.playing = False
+        self.x = x
+        self.y = y
+        self.rows = rows
+        self.cols = cols
         self.width = self.x_unit * self.cols
         self.height = self.y_unit * self.rows
         self.right_edge = self.x + self.width
@@ -110,16 +109,15 @@ class GameGrid:
         self.quick_drop = False
         self.move_left = False
         self.move_right = False
-        self.show_coords = False
         self.drop_rate = frame_rate
         self.default_block_color = white
         self.lock_delay = frame_rate / 2
         self.hold_delay = frame_rate / 5
         self.pressed_keys = []
-        for i in range(323):
+        for i in range(len(pygame.key.get_pressed())):
             self.pressed_keys.append(0)
 
-    def new_pos(self, new_x, new_y):
+    def new_pos(self, new_x: int, new_y: int):
         x_offset = new_x - self.x
         y_offset = new_y - self.y
         self.x += x_offset
@@ -166,8 +164,6 @@ class GameGrid:
         # Draw locked blocks
         for blk in self.blocks:
             blk.draw()
-            if self.show_coords:
-                blk.show_coord()
         # Draw tets
         if isinstance(self.shadow, Tet):
             self.shadow.draw()
@@ -289,7 +285,7 @@ class GameGrid:
         to_kill = []
         for blk in self.blocks:
             if blk.kill_me:
-                to_kill.append(game_grid.blocks.index(blk))
+                to_kill.append(self.blocks.index(blk))
         self.clear_blocks()
         to_kill.sort(reverse=True)
         for i in range(len(to_kill)):
@@ -465,7 +461,7 @@ class GameGrid:
         self.player_move_faller()
 
     def play(self):
-        if self.on:
+        if self.playing:
             self.cast_shadow()
             if not self.paused:
                 self.move_lock_tet()
@@ -475,11 +471,11 @@ class GameGrid:
             self.draw()
 
     def toggle_on(self):
-        if self.on:
+        if self.playing:
             self.paused = True
-            self.on = False
+            self.playing = False
         else:
-            self.on = True
+            self.playing = True
 
     def key_down(self, keys):
         keys = list(keys)
@@ -489,89 +485,10 @@ class GameGrid:
             else:
                 self.pressed_keys[i] = keys[i]
 
-        # Test
+        # Exit game
         if keys[K_q]:
             self.toggle_on()
-        if keys[K_w]:
-            self.start_round()
 
-        # Spawn TBlock
-        if keys[K_t]:
-            if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
-                self.next_tet = Tet(self, self.right_edge + 15, self.y, 'TBlock')
-                self.next_tet.change_block_colors()
-                self.last_spawned[1] = self.next_tet.type
-            else:
-                self.faller = Tet(self, self.x + (self.x_unit * self.cols) / 2 - self.x_unit * 2,
-                                  self.y - self.y_unit * 2, 'TBlock')
-                self.faller.dev = True
-                self.next_round_timer = 0
-        # Spawn JBlock
-        if keys[K_j]:
-            if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
-                self.next_tet = Tet(self, self.right_edge + 15, self.y, 'JBlock')
-                self.next_tet.change_block_colors()
-                self.last_spawned[1] = self.next_tet.type
-            else:
-                self.faller = Tet(self, self.x + (self.x_unit * self.cols) / 2 - self.x_unit * 2,
-                                  self.y - self.y_unit * 2, 'JBlock')
-                self.faller.dev = True
-                self.next_round_timer = 0
-        # Spawn LBlock
-        if keys[K_l]:
-            if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
-                self.next_tet = Tet(self, self.right_edge + 15, self.y, 'LBlock')
-                self.next_tet.change_block_colors()
-                self.last_spawned[1] = self.next_tet.type
-            else:
-                self.faller = Tet(self, self.x + (self.x_unit * self.cols) / 2 - self.x_unit * 2,
-                                  self.y - self.y_unit * 2, 'LBlock')
-                self.faller.dev = True
-                self.next_round_timer = 0
-        # Spawn IBlock
-        if keys[K_i]:
-            if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
-                self.next_tet = Tet(self, self.right_edge + 15, self.y, 'IBlock')
-                self.next_tet.change_block_colors()
-                self.last_spawned[1] = self.next_tet.type
-            else:
-                self.faller = Tet(self, self.x + (self.x_unit * self.cols) / 2 - self.x_unit * 2,
-                                  self.y - self.y_unit * 2, 'IBlock')
-                self.faller.dev = True
-                self.next_round_timer = 0
-        # Spawn OBlock
-        if keys[K_o]:
-            if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
-                self.next_tet = Tet(self, self.right_edge + 15, self.y, 'OBlock')
-                self.next_tet.change_block_colors()
-                self.last_spawned[1] = self.next_tet.type
-            else:
-                self.faller = Tet(self, self.x + (self.x_unit * self.cols) / 2 - self.x_unit * 2,
-                                  self.y - self.y_unit * 2, 'OBlock')
-                self.faller.dev = True
-                self.next_round_timer = 0
-        # Spawn SBlock
-        if keys[K_s]:
-            if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
-                self.next_tet = Tet(self, self.right_edge + 15, self.y, 'SBlock')
-                self.next_tet.change_block_colors()
-                self.last_spawned[1] = self.next_tet.type
-            else:
-                self.faller = Tet(self, self.x + (self.x_unit * self.cols) / 2 - self.x_unit * 2,
-                                  self.y - self.y_unit * 2, 'SBlock')
-                self.faller.dev = True
-                self.next_round_timer = 0
-        # Spawn ZBlock
-        if keys[K_z]:
-            if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
-                self.next_tet = Tet(self, self.right_edge + 15, self.y, 'ZBlock')
-                self.next_tet.change_block_colors()
-                self.last_spawned[1] = self.next_tet.type
-            else:
-                self.faller = Tet(self, self.x + (self.x_unit * self.cols) / 2 - self.x_unit * 2,
-                                  self.y - self.y_unit * 2, 'ZBlock')
-                self.faller.dev = True
-                self.next_round_timer = 0
         # Spawn single block
         if keys[K_f]:
             if isinstance(self.faller, Tet) and isinstance(self.next_tet, Tet):
@@ -579,16 +496,10 @@ class GameGrid:
                 self.next_tet.change_block_colors()
                 self.last_spawned[1] = self.next_tet.type
             else:
-                self.faller = Tet(self, self.x + (self.x_unit * self.cols) / 2 - self.x_unit * 2,
+                self.faller = Tet(self, int(self.x + (self.x_unit * self.cols) / 2 - self.x_unit * 2),
                                   self.y - self.y_unit * 2)
                 self.faller.dev = True
                 self.next_round_timer = 0
-
-        # Show block coords
-        if keys[K_x] and not self.show_coords:
-            self.show_coords = True
-        elif keys[K_x] and self.show_coords:
-            self.show_coords = False
 
         # Start game / pause
         if keys[K_SPACE]:
@@ -670,9 +581,9 @@ class GameGrid:
 
 
 class Block:
-    def __init__(self, grid: GameGrid, x, y, tet_type=''):
-        self.x = int(x)
-        self.y = int(y)
+    def __init__(self, grid: GameGrid, x: int, y: int, tet_type=''):
+        self.x = x
+        self.y = y
         self.width = grid.x_unit
         self.height = grid.y_unit
         self.to_lock = False
@@ -721,14 +632,14 @@ class Block:
 
 
 class Tet:
-    def __init__(self, grid: GameGrid, x, y, kind=''):
+    def __init__(self, grid: GameGrid, x: int, y: int, kind=''):
         self.dev = False
         if kind in tet_colors:
             tet_color = tet_colors[kind]
         else:
             tet_color = grid.default_block_color
-        self.x = int(x)
-        self.y = int(y)
+        self.x = x
+        self.y = y
         self.grid_x = grid.x
         self.grid_y = grid.y
         self.right_edge = grid.right_edge
@@ -914,19 +825,94 @@ class Tet:
             self.correct_off_grid()
 
 
-# Game grid
-grid_rows = 19
-grid_cols = 10
-grid_width = 400
-grid_height = 600
-game_grid = GameGrid(60, 60, grid_width, grid_height, grid_rows, grid_cols, lock_aspect='height')
+class Button:
+    def __init__(self, x, y, label, padding=5, button_color=None, font=default_font, font_size=20, font_color=None):
+        if font_color is None:
+            font_color = white
+        if button_color is None:
+            button_color = black
+        self.x = x
+        self.y = y
+        self.padding = padding
+        self.color = button_color
+        self.font = pygame.font.SysFont(font, font_size)
+        self.label = self.font.render(label, True, font_color)
+        self.label_width = int(self.label.get_rect().width)
+        self.label_height = int(self.label.get_rect().height)
+        self.width = self.label_width + self.padding * 2
+        self.height = self.label_height + self.padding * 2
+
+    def draw(self):
+        pygame.draw.rect(screen, white, (self.x, self.y, self.width, self.height))
+        pygame.draw.rect(screen, self.color, (self.x + 2, self.y + 2, self.width - 4, self.height - 4))
+        screen.blit(self.label, (self.x + self.padding, self.y + self.padding))
+
+    def check_collide(self, pos: tuple):
+        if self.x <= pos[0] <= self.x + self.width:
+            if self.y <= pos[1] <= self.y + self.height:
+                return True
+        return False
+
+
+class Game:
+    def __init__(self, x: int, y: int, width: int, height: int, rows: int, cols=10, lock_aspect=''):
+        # Lock aspect and preserve width
+        if lock_aspect == 'width':
+            x_unit = int(width / cols)
+            y_unit = x_unit
+        # Lock aspect and preserve height
+        elif lock_aspect == 'height':
+            y_unit = int(height / rows)
+            x_unit = y_unit
+        else:
+            x_unit = int(width / cols)
+            y_unit = int(height / rows)
+
+        self.x = x
+        self.y = y
+        self.width = x_unit * cols
+        self.height = y_unit * rows
+        self.buttons = [Button(self.x + 20, self.y + 20, 'Start')]
+        self.grid = GameGrid(self.x, self.y, self.width, self.height, rows, cols)
+
+    def draw(self):
+        pygame.draw.rect(screen, pink, (self.x, self.y, self.width, self.height))
+        for button in self.buttons:
+            button.draw()
+
+    def new_pos(self, new_x: int, new_y: int):
+        x_offset = new_x - self.x
+        y_offset = new_y - self.y
+        for button in self.buttons:
+            button.x += x_offset
+            button.y += y_offset
+        self.grid.new_pos(new_x, new_y)
+        self.x = new_x
+        self.y = new_y
+
+    def mouse_input(self, mouse_pos: tuple, mouse_buttons: tuple):
+        if mouse_buttons[0] == 1:
+            for button in self.buttons:
+                if button.check_collide(mouse_pos):
+                    self.grid.playing = True
+                    self.grid.start_round()
+
+    def run(self):
+        screen.fill(black)
+        if not self.grid.playing:
+            self.draw()
+        else:
+            self.grid.play()
+        clock.tick(frame_rate)
+        pygame.display.flip()
+
+
+game = Game(60, 60, 400, 600, rows=18, cols=10, lock_aspect='height')
+
 
 mouse_hold = False
-
 running = True
 while running:
-    screen.fill(black)
-
     # Event loop
     for event in pygame.event.get():
         # Press close button
@@ -943,25 +929,29 @@ while running:
                 break
 
             # Send inputs to game_grid
-            game_grid.key_down(keys_list)
+            game.grid.key_down(keys_list)
 
         # Key up events
         if event.type == pygame.KEYUP:
             keys_list = pygame.key.get_pressed()
 
             # Update pressed keys in game_grid
-            game_grid.key_up(keys_list)
+            game.grid.key_up(keys_list)
 
         # Mouse down event
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
+            # Send mouse clicks to game menu
+            game.mouse_input(pygame.mouse.get_pos(), pygame.mouse.get_pressed())
+
+            # Move game
+            if event.button == 3:
                 mouse_hold = True
-                mouse_pos = pygame.mouse.get_pos()
-                game_grid.new_pos(mouse_pos[0] - game_grid.x, mouse_pos[1] - game_grid.y)
+                game.new_pos(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1])
 
         # Mouse up event
         if event.type == pygame.MOUSEBUTTONUP:
-            mouse_hold = False
+            if pygame.mouse.get_pressed()[2] == 0:
+                mouse_hold = False
 
         # Window resize event
         if event.type == pygame.VIDEORESIZE:
@@ -969,15 +959,10 @@ while running:
             screen_height = event.h
             screen = pygame.display.set_mode((screen_width, screen_height), RESIZABLE)
 
-    # Mouse actions
     if mouse_hold:
-        mouse_pos = pygame.mouse.get_pos()
-        game_grid.new_pos(mouse_pos[0], mouse_pos[1])
+        game.new_pos(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1])
 
-    game_grid.play()
-
-    clock.tick(frame_rate)
-    pygame.display.flip()
+    game.run()
 
 pygame.display.quit()
 pygame.quit()
