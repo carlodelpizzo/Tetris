@@ -385,6 +385,7 @@ class GameGrid:
                 self.held_tet.change_block_colors()
 
                 self.faller = Tet(self, self.faller.x, self.faller.y, self.next_tet.type)
+                self.faller.correct_off_grid()
 
                 self.next_tet = None
                 self.generate_tets()
@@ -617,7 +618,6 @@ class GameGrid:
             elif keys[K_4]:
                 if isinstance(self.held_tet, Tet):
                     self.held_tet.rotate(self, ignore_checks=True)
-
             # Rotate falling block
             if keys[K_r]:
                 if isinstance(self.faller, Tet):
@@ -652,19 +652,19 @@ class GameGrid:
         for i in range(len(keys)):
             keys_up.append(0)
         for i in range(len(keys)):
-            if self.pressed_keys[i] > keys[i]:
+            if keys[i] == 0:
                 self.pressed_keys[i] = 0
                 keys_up[i] = 1
 
         # Turn off quick drop
-        if keys_up[K_DOWN] and self.quick_drop:
+        if keys_up[K_DOWN]:
             self.quick_drop = False
         # Stop move falling block right
-        if keys_up[K_RIGHT] and self.move_right:
+        if keys_up[K_RIGHT]:
             self.move_delay_timer = 0
             self.move_right = False
         # Stop move falling block left
-        if keys_up[K_LEFT] and self.move_left:
+        if keys_up[K_LEFT]:
             self.move_delay_timer = 0
             self.move_left = False
 
@@ -929,8 +929,6 @@ while running:
 
     # Event loop
     for event in pygame.event.get():
-        keys_list = pygame.key.get_pressed()
-
         # Press close button
         if event.type == pygame.QUIT:
             running = False
@@ -938,6 +936,7 @@ while running:
 
         # Key down events
         if event.type == pygame.KEYDOWN:
+            keys_list = pygame.key.get_pressed()
             # Close window shortcut
             if (keys_list[K_LCTRL] or keys_list[K_RCTRL]) and keys_list[K_w]:
                 running = False
@@ -948,6 +947,8 @@ while running:
 
         # Key up events
         if event.type == pygame.KEYUP:
+            keys_list = pygame.key.get_pressed()
+
             # Update pressed keys in game_grid
             game_grid.key_up(keys_list)
 
