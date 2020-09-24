@@ -293,9 +293,10 @@ class GameGrid:
         self.score += self.cols * 10 * lines_cleared * lines_cleared
 
     def start_round(self):
-        self.rounds += 1
-        self.generate_tets()
-        self.generate_tets()
+        if self.faller is None:
+            self.rounds += 1
+            self.generate_tets()
+            self.generate_tets()
 
     def end_round(self):
         num_active = int(len(self.blocks))
@@ -355,7 +356,8 @@ class GameGrid:
                     self.generate_tets()
                     return
             if ran_pos:
-                ran_x = random.randint(self.x, self.x_unit * self.cols)
+                ran_x = random.randint(0, self.cols - 2)
+                ran_x = ran_x * self.x_unit
             else:
                 ran_x = (self.x_unit * self.cols) / 2 - self.x_unit * 2
 
@@ -365,7 +367,8 @@ class GameGrid:
             self.next_tet = Tet(self, self.right_edge + 10, self.y, new_tet)
             self.next_tet.change_block_colors()
             self.faller.change_block_colors(self.default_block_color)
-            self.faller.new_pos(self.x + ran_x, self.y + -self.y_unit * 4)
+            self.faller.new_pos(self.x + ran_x, self.y - self.y_unit * 4)
+            self.faller.correct_off_grid()
             self.last_spawned = [self.last_spawned[1], new_tet]
 
     def hold_swap_tet(self):
