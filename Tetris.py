@@ -829,32 +829,85 @@ class Tet:
 
 
 class Button:
-    def __init__(self, x, y, label, padding=5, button_color=None, font=default_font, font_size=20, font_color=None):
+    def __init__(self, x, y, label, padding=5, border_width=3, border_color=None,
+                 button_color=None, font=default_font, font_size=20, font_color=None):
+        if border_color is None:
+            border_color = white
         if font_color is None:
             font_color = white
-        if button_color is None:
-            button_color = black
         self.x = x
         self.y = y
         self.padding = padding
         self.color = button_color
         self.font = pygame.font.SysFont(font, font_size)
         self.label = self.font.render(label, True, font_color)
+        self.pressed_label = self.font.render(label, True, [255 - font_color[0],
+                                                            255 - font_color[1], 255 - font_color[2]])
         self.label_width = int(self.label.get_rect().width)
         self.label_height = int(self.label.get_rect().height)
         self.width = self.label_width + self.padding * 2
         self.height = self.label_height + self.padding * 2
+        self.border = border_width
+        self.border_color = border_color
+        self.border_color_pressed = [255 - border_color[0], 255 - border_color[1], 255 - border_color[2]]
+        self.run = False
+        self.pressed = False
+        self.pressed_draw = False
 
     def draw(self):
-        pygame.draw.rect(screen, white, (self.x, self.y, self.width, self.height))
-        pygame.draw.rect(screen, self.color, (self.x + 2, self.y + 2, self.width - 4, self.height - 4))
-        screen.blit(self.label, (self.x + self.padding, self.y + self.padding))
+        if not self.pressed_draw:
+            if self.color is not None:
+                pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height))
+            self.draw_border()
+            screen.blit(self.label, (self.x + self.padding, self.y + self.padding))
+        else:
+            if self.color is not None:
+                pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height))
+            self.draw_border()
+            screen.blit(self.pressed_label, (self.x + self.padding, self.y + self.padding))
+
+    def draw_border(self):
+        if not self.pressed_draw:
+            pygame.draw.rect(screen, self.border_color, (self.x, self.y, self.border, self.height))
+            pygame.draw.rect(screen, self.border_color, (self.x, self.y, self.width, self.border))
+            pygame.draw.rect(screen, self.border_color, (self.x, self.y + self.height - self.border, self.width,
+                                                         self.border))
+            pygame.draw.rect(screen, self.border_color, (self.x + self.width - self.border,
+                                                         self.y, self.border, self.height))
+        else:
+            pygame.draw.rect(screen, self.border_color_pressed, (self.x, self.y, self.border, self.height))
+            pygame.draw.rect(screen, self.border_color_pressed, (self.x, self.y, self.width, self.border))
+            pygame.draw.rect(screen, self.border_color_pressed, (self.x, self.y + self.height - self.border,
+                                                                 self.width, self.border))
+            pygame.draw.rect(screen, self.border_color_pressed, (self.x + self.width - self.border,
+                                                                 self.y, self.border, self.height))
 
     def check_collide(self, pos: tuple):
         if self.x <= pos[0] <= self.x + self.width:
             if self.y <= pos[1] <= self.y + self.height:
                 return True
         return False
+
+    def mouse_input(self, pos: tuple, buttons: tuple, pressed):
+        if pressed == 'DOWN':
+            if self.check_collide(pos):
+                if buttons[0] == 1:
+                    self.pressed = True
+                    self.pressed_draw = True
+        elif pressed == 'UP' and self.pressed_draw:
+            if buttons[0] == 0:
+                self.pressed = False
+                self.pressed_draw = False
+                self.run = True
+        elif pressed == 'UP' and self.pressed:
+            if buttons[0] == 0:
+                self.pressed = False
+                self.pressed_draw = False
+        elif pressed == '' and self.pressed:
+            if self.check_collide(pos):
+                self.pressed_draw = True
+            else:
+                self.pressed_draw = False
 
 
 class Game:
@@ -875,7 +928,7 @@ class Game:
         self.y = y
         self.width = x_unit * cols
         self.height = y_unit * rows
-        self.buttons = [Button(self.x + 20, self.y + 20, 'Start')]
+        self.buttons = [Button(self.x + 20, self.y + 20, 'Start', border_color=black, font_color=black)]
         self.grid = GameGrid(self.x, self.y, self.width, self.height, rows, cols)
 
     def draw(self):
@@ -893,12 +946,9 @@ class Game:
         self.x = new_x
         self.y = new_y
 
-    def mouse_input(self, mouse_pos: tuple, mouse_buttons: tuple):
-        if mouse_buttons[0] == 1:
-            for button in self.buttons:
-                if button.check_collide(mouse_pos):
-                    self.grid.playing = True
-                    self.grid.start_round()
+    def mouse_input(self, mouse_pos: tuple, mouse_buttons: tuple, pressed=''):
+        for button in self.buttons:
+            button.mouse_input(mouse_pos, mouse_buttons, pressed)
 
     def run(self):
         screen.fill(black)
@@ -906,6 +956,13 @@ class Game:
             self.draw()
         else:
             self.grid.play()
+
+        # Start game button
+        if self.buttons[0].run:
+            self.grid.playing = True
+            self.buttons[0].run = False
+            self.grid.start_round()
+
         clock.tick(frame_rate)
         pygame.display.flip()
 
@@ -944,7 +1001,7 @@ while running:
         # Mouse down event
         if event.type == pygame.MOUSEBUTTONDOWN:
             # Send mouse clicks to game menu
-            game.mouse_input(pygame.mouse.get_pos(), pygame.mouse.get_pressed())
+            game.mouse_input(pygame.mouse.get_pos(), pygame.mouse.get_pressed(), pressed='DOWN')
 
             # Move game
             if event.button == 3:
@@ -953,6 +1010,8 @@ while running:
 
         # Mouse up event
         if event.type == pygame.MOUSEBUTTONUP:
+            game.mouse_input(pygame.mouse.get_pos(), pygame.mouse.get_pressed(), pressed='UP')
+
             if pygame.mouse.get_pressed()[2] == 0:
                 mouse_hold = False
 
@@ -965,6 +1024,7 @@ while running:
     if mouse_hold:
         game.new_pos(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1])
 
+    game.mouse_input(pygame.mouse.get_pos(), pygame.mouse.get_pressed())
     game.run()
 
 pygame.display.quit()
