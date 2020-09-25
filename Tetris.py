@@ -302,11 +302,19 @@ class GameGrid:
         num_active = int(len(self.blocks))
         num_clear = int(self.cleared / self.cols)
 
+        round_time = int(self.round_time / frame_rate)
+        if round_time >= 60:
+            minutes = int(round_time / 60)
+            seconds = int(round_time % 60)
+            round_time = str(minutes).zfill(2) + ':' + str(seconds).zfill(2)
+        else:
+            round_time = '00:' + str(round_time).zfill(2)
+
         if num_active != 0:
             print('############################################################################')
             print('')
             print('cleared rows: ' + str(num_clear) + ', active blocks: ' + str(num_active) +
-                  ', round frames: ' + str(self.round_time) + ', round: ' + str(self.rounds) +
+                  ', round time: ' + round_time + ', round: ' + str(self.rounds) +
                   ', score: ' + str(self.score))
             print('')
             print('############################################################################')
