@@ -457,7 +457,7 @@ class GameGrid:
             elif self.fall_delay_timer == 0:
                 self.faller.move_y(self, self.y_unit)
 
-            # Check if need to lock or end round
+            # Check for need to lock or end round
             self.faller.update_state(self)
 
         # Kill Tet
@@ -608,10 +608,10 @@ class Block:
         self.shadow = False
 
     def draw(self):
-        accent0 = [self.color[0] * 0.2, self.color[1] * 0.2, self.color[2] * 0.2]
-        accent1 = [self.color[0] * 0.4, self.color[1] * 0.4, self.color[2] * 0.4]
-        accent2 = [self.color[0] * 0.6, self.color[1] * 0.6, self.color[2] * 0.6]
-        accent3 = [self.color[0] * 0.8, self.color[1] * 0.8, self.color[2] * 0.8]
+        accent0 = [int(self.color[0] * 0.2), int(self.color[1] * 0.2), int(self.color[2] * 0.2)]
+        accent1 = [int(self.color[0] * 0.4), int(self.color[1] * 0.4), int(self.color[2] * 0.4)]
+        accent2 = [int(self.color[0] * 0.6), int(self.color[1] * 0.6), int(self.color[2] * 0.6)]
+        accent3 = [int(self.color[0] * 0.8), int(self.color[1] * 0.8), int(self.color[2] * 0.8)]
         pygame.draw.rect(screen, accent0, (self.x + 1, self.y + 1, self.width - 1, self.height - 1))
         pygame.draw.rect(screen, accent1, (self.x + 2, self.y + 2, self.width - 4, self.height - 4))
         pygame.draw.rect(screen, accent2, (self.x + 4, self.y + 4, self.width - 8, self.height - 8))
