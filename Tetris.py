@@ -12,7 +12,7 @@ screen_height = 700
 screen = pygame.display.set_mode((screen_width, screen_height), RESIZABLE)
 
 # Title
-pygame.display.set_caption('Tetris for Ashton')
+pygame.display.set_caption('Tetris')
 
 # Colors
 black = [0, 0, 0]
